@@ -1,59 +1,59 @@
 ## MDP definition for the merging problem
 
-const MergingState = SVector{5, Float64} # se, ve, ae, so, vo
+const MergingState = Vector{Float64} #SVector{5, Float64} # se, ve, ae, so, vo
 
 @with_kw struct MergingMDP <: MDP{MergingState, Int64}
     env::MergingEnvironment = MergingEnvironment()
     cardef::VehicleDef = CARDEF
     dt::Float64 = 0.2
-    min_acc::Float64 = 0.0
+    min_acc::Float64 = -4.0
     pos_res::Float64 = 2.0*M2L
     vel_res::Float64 = 2.0
     acc_res::Float64 = 1.0
     jerk_levels::SVector{5, Float64} = SVector(-0.2, -0.1, 0, 0.1, 0.2)
-    human_actions::SVector{3, Float64} =  SVector(-2.0, 0.0, 2.0)
+    human_actions::Vector{Float64} = [-2.0, 0.0, 2.0]
     ego_lane::Lane = env.roadway[LaneTag(MERGE_LANE_ID, 1)]
     other_lane::Lane = env.roadway[LaneTag(MAIN_LANE_ID, 1)]
-    ego_grid::RectangleGrid{1} = RectangleGrid(700.0:pos_res:900)
-    human_grid::RectangleGrid{1} = RectangleGrid(650.0:pos_res:850) 
-    velocity_grid::RectangleGrid{1} = RectangleGrid(10.0:vel_res:20.0)
-    acceleration_grid::RectangleGrid{1} = RectangleGrid(-4.0:acc_res:2)
+    ego_grid::LinRange{Float64} = LinRange(0.0, env.merge_lane_length + env.after_merge_length, 26)
+    human_grid::LinRange{Float64} = LinRange(0.0, env.merge_lane_length + env.after_merge_length, 26)
+    velocity_grid::LinRange{Float64} = LinRange(0.0, env.main_lane_vmax, 10)
+    acceleration_grid::LinRange{Float64} = LinRange(-4.0, 2, 4)
+    state_grid::RectangleGrid{5} = RectangleGrid(ego_grid, velocity_grid, acceleration_grid, human_grid, velocity_grid)
     goal_reward::Float64 = 1.0
     collision_cost::Float64 = 0.0
     discount_factor::Float64 = 1.0
 end
 
 POMDPs.discount(mdp::MergingMDP) = mdp.discount_factor
-
 POMDPs.actions(mdp::MergingMDP) = 1:7
 POMDPs.n_actions(mdp::MergingMDP) = 7
 POMDPs.actionindex(mdp::MergingMDP, a::Int64) = a
 
 
 function POMDPs.states(mdp::MergingMDP) 
-    prod = Iterators.product(mdp.ego_grid.cutPoints[1], 
-                             mdp.velocity_grid.cutPoints[1],
-                             mdp.acceleration_grid.cutPoints[1],
-                             mdp.human_grid.cutPoints[1],
-                             mdp.velocity_grid.cutPoints[1])
-    vecs = imap(x->MergingState(x...), prod)
+    prod = Iterators.product(mdp.ego_grid, 
+                             mdp.velocity_grid,
+                             mdp.acceleration_grid,
+                             mdp.human_grid,
+                             mdp.velocity_grid)
+    vecs = imap(x->Float64[x...], prod)
 end
 POMDPs.n_states(mdp::MergingMDP) = reduce(*, length.([mdp.ego_grid, mdp.velocity_grid, mdp.acceleration_grid, mdp.human_grid, mdp.velocity_grid]))
 
-function POMDPs.stateindex(mdp::MergingMDP, s::SVector{5, Float64})
+function POMDPs.stateindex(mdp::MergingMDP, s::MergingState)
     se, ve, ae, so, vo = s
-    sei = findfirst(x->isapprox(x, se), mdp.ego_grid.cutPoints[1])
-    vei = findfirst(x->isapprox(x, ve), mdp.velocity_grid.cutPoints[1])
-    aei = findfirst(x->isapprox(x, ae), mdp.acceleration_grid.cutPoints[1])
-    soi = findfirst(x->isapprox(x, so), mdp.human_grid.cutPoints[1])
-    voi = findfirst(x->isapprox(x, vo), mdp.velocity_grid.cutPoints[1])
+    sei = findfirst(x->isapprox(x, se), mdp.ego_grid)
+    vei = findfirst(x->isapprox(x, ve), mdp.velocity_grid)
+    aei = findfirst(x->isapprox(x, ae), mdp.acceleration_grid)
+    soi = findfirst(x->isapprox(x, so), mdp.human_grid)
+    voi = findfirst(x->isapprox(x, vo), mdp.velocity_grid)
     return LinearIndices((length(mdp.ego_grid), length(mdp.velocity_grid), length(mdp.acceleration_grid), 
                           length(mdp.human_grid), length(mdp.velocity_grid)))[sei, vei, aei, soi, voi]
 end
 
 
 function POMDPs.reward(mdp::MergingMDP, s::MergingState, a::Int64, sp::MergingState)
-    if sp[1] >= mdp.ego_grid.cutPoints[1][end]
+    if first(sp) >= last(mdp.ego_grid)
         return mdp.goal_reward
     end
     if collisioncheck(mdp, sp)
@@ -62,69 +62,65 @@ function POMDPs.reward(mdp::MergingMDP, s::MergingState, a::Int64, sp::MergingSt
     return 0.0
 end
 
-POMDPs.isterminal(mdp::MergingMDP, s::MergingState) = s[1] >= mdp.ego_grid.cutPoints[1][end] || collisioncheck(mdp, s)
+POMDPs.isterminal(mdp::MergingMDP, s::MergingState) = first(s) >= last(mdp.ego_grid) || collisioncheck(mdp, s)
 
 function POMDPs.transition(mdp::MergingMDP, s::MergingState, a::Int64)
-    sitp, switp, vitp, vwitp, acc_itp, acc_witp = ego_transition(mdp, s, a)
-    so, sow, vo, vow = other_transition(mdp, s)
-    states = map(x -> SVector(x...), Iterators.product(sitp, vitp, acc_itp, so, vo))
-    weights = map(x->reduce(*,x), Iterators.product(switp, vwitp, acc_witp, sow, vow))
-    tot_weights = sum(weights)
-    weights = map(x->reduce(*,x)/tot_weights, Iterators.product(switp, vwitp, acc_witp, sow, vow) )
-    return SparseCat(states, weights)
+    if first(s) >= last(mdp.ego_grid)
+        return SparseCat([s], [1.0])
+    end
+    se, ve, ae = ego_transition(mdp, s, a)
+    sitps = MergingState[]
+    witps = Float64[]
+    for ah in mdp.human_actions
+        so, vo = other_transition(mdp, s, ah)
+        sitp, witp = interpolants(mdp.state_grid, SVector(se, ve, ae, so, vo))
+        sitp = ind2x.(Ref(mdp.state_grid), sitp)
+        sitps = vcat(sitps, sitp)
+        witps = vcat(witps, witp)
+    end
+    sitps, witps = remove_doublons(sitps, witps)
+    normalize!(witps, 1)
+    return SparseCat(sitps, witps)
+end
+
+function remove_doublons(s::Vector{S}, w::Vector{Float64}) where S
+    ns = S[]
+    ws = Float64[]
+    for (i, s) in enumerate(s)
+        si = findfirst(isequal(s), ns)
+        if si != nothing 
+            ws[si] += w[i]
+        else 
+            push!(ns, s)
+            push!(ws, w[i])
+        end
+    end
+    return ns, ws
 end
 
 function ego_transition(mdp::MergingMDP, s::MergingState, a::Int64)
     se, v, acc, so, vo = s 
-
-    # ego vehicle update
     acc_ = acc
-    if a == 1
+    if a == 1 # full brake
         acc_ = mdp.min_acc
-    elseif a == 7
-        acc_ = 0.
+    elseif a == 7 # release throttle
+        acc_ = 0.0
     else 
         acc_ += mdp.jerk_levels[a - 1]
     end
     v_ = v + acc_ * mdp.dt 
     s_ = se + v_*mdp.dt
-    sitp, switp = interpolants(mdp.ego_grid, SVector(s_))
-    sitp = broadcast(x-> ind2x(mdp.ego_grid, x)[1], sitp)
-    vitp, vwitp = interpolants(mdp.velocity_grid, SVector(v_))
-    vitp = broadcast(x-> ind2x(mdp.velocity_grid, x)[1], vitp)
-    acc_itp, acc_witp = interpolants(mdp.acceleration_grid, SVector(acc_))
-    acc_itp = broadcast(x -> ind2x(mdp.acceleration_grid, x)[1], acc_itp)
-    return sitp, switp, vitp, vwitp, acc_itp, acc_witp
-end
-
-function other_transition(mdp::MergingMDP, s::MergingState)
-    so = Float64[]
-    sow = Float64[]
-    vo = Float64[]
-    vow = Float64[]
-    for ah in mdp.human_actions 
-        so_itp, so_witp, vo_itp, vo_witp = other_transition(mdp, s, ah)
-        so = vcat(so, so_itp)
-        sow = vcat(sow, so_witp)
-        vo = vcat(vo, vo_itp)
-        vow = vcat(vow, vo_witp)
-    end
-    return so, sow, vo, vow
+    return s_, v_, acc_
 end
 
 function other_transition(mdp::MergingMDP, s::MergingState, ah::Float64)
     se, v, acc, so, vo = s  
     vo_ = vo + ah* mdp.dt 
     so_ = so + vo_*mdp.dt
-    if so_ > maximum(mdp.human_grid.cutPoints[1])
-        so_ = minimum(mdp.human_grid.cutPoints[1])
+    if so_ > last(mdp.human_grid)
+        so_ = first(mdp.human_grid)
     end
-    so_itp, so_witp = interpolants(mdp.human_grid, SVector(so_))
-    so_itp = broadcast(x-> ind2x(mdp.human_grid, x)[1], so_itp)
-    vo_itp, vo_witp = interpolants(mdp.velocity_grid, SVector(vo_))
-    vo_itp = broadcast(x-> ind2x(mdp.velocity_grid, x)[1], vo_itp)
-    prob = 1/length(mdp.human_actions)
-    return so_itp, so_witp.*prob, vo_itp, vo_witp.*prob
+    return so_, vo_
 end
 
 ## helpers
@@ -149,11 +145,36 @@ end
 
 ## rendering 
 
-function AutoViz.render!(rm::RenderModel, s::MergingState)
-    se, v, acc, so, vo = s  
+@with_kw struct MergingViz
+    mdp::MergingMDP = MergingMDP()
+    s::MergingState =  [mdp.ego_grid[1], mdp.velocity_grid[1], mdp.acceleration_grid[1], mdp.human_grid[1], mdp.velocity_grid[1]]
+    a::Union{Nothing, Int64} = nothing
+    action_values::Union{Nothing, Vector{Float64}} = nothing
+end
+
+function AutoViz.render!(rm::RenderModel, v::MergingViz)
+    render!(rm , mdp.env.roadway)
+    se, ve, acc, so, vo = v.s
+    text_ego = @sprintf("v: %2.2f", ve)
+    act = v.a
+    if act != nothing
+        as = "a = "
+        if act == 1
+            as *= "full brake"
+        elseif act == 7
+            as *= "release"
+        else
+            as *=  @sprintf("%1.2f", mdp.jerk_levels[act - 1])
+        end
+        text_ego *= ", " * as
+    end
+    av = v.action_values 
+    if av != nothing 
+        text_ego *= "Probas " * reduce(*, @sprintf("%1.2f, ", pa) for pa in av)
+    end
     ego_posG = get_posG(Frenet(mdp.ego_lane, se), mdp.env.roadway)
     ego_acar = ArrowCar(ego_posG.x, ego_posG.y, ego_posG.θ,
-                        color=COLOR_CAR_EGO, text="v: $v",
+                        color=COLOR_CAR_EGO, text=text_ego,
                         length=mdp.cardef.length, width=mdp.cardef.width)
     other_posG = get_posG(Frenet(mdp.other_lane, so), mdp.env.roadway)
     other_acar = ArrowCar(other_posG.x, other_posG.y, other_posG.θ,

@@ -16,21 +16,24 @@
 # maxV2: 	  maximum velocity allowed for the lane after the merging point
 # '''
 
+using AutomotiveDrivingModels
+using Parameters
+
 const M2L = 4
 const MAIN_LANE_ID = 1
 const MERGE_LANE_ID = 2
-const LANE_WIDTH = 14.0
-const MAIN_LANE_VMAX = 20.0
-const MERGE_LANE_VMAX = 15.0
-const CARDEF = VehicleDef(AgentClass.CAR, 4.5*M2L, 2.0*M2L)
+const CARDEF = VehicleDef()
 
 const EGO_ID = 1
 
 @with_kw struct MergingEnvironment
-    lane_width::Float64 = 14.0
-    main_lane_vmax::Float64 = 20.0
-    merge_lane_vmax::Float64 = 15.0
-    roadway::Roadway = generate_merging_roadway(lane_width, main_lane_vmax, merge_lane_vmax) 
+    lane_width::Float64 = 3.0
+    main_lane_vmax::Float64 = 25.0
+    merge_lane_vmax::Float64 = 25.0
+    main_lane_length::Float64 = 20.0
+    merge_lane_length::Float64 = 20.0
+    after_merge_length::Float64 = 20.0
+    roadway::Roadway = generate_merging_roadway(lane_width, main_lane_vmax, merge_lane_vmax, after_merge_length) 
 end
 
 
@@ -44,27 +47,28 @@ end
 
 function generate_merging_roadway(lane_width::Float64 = 3.0, 
                                    main_lane_vmax::Float64 = 20.0,
-                                   merge_lane_vmax::Float64 = 15.0)
+                                   merge_lane_vmax::Float64 = 15.0,
+                                   main_lane_length::Float64 = 20.0, 
+                                   merge_lane_length::Float64 = 20.0,
+                                   after_merge_length::Float64 = 20.0)
     # init empty roadway 
     roadway = Roadway()
-    n_pt = 2 # sample points for the roadway, only two needed each time, since all segments are straight
+    n_pts = 2 # sample points for the roadway, only two needed each time, since all segments are straight
 
+    merge_point = VecE2(0.0, 0.0)
     # define main lane 
-    main_lane_startpt = VecE2(0.0, 50.0)
-    main_lane_endpt = VecE2(1000.0, 50.)
-    curve = gen_straight_curve(main_lane_startpt, main_lane_endpt, 2)
+    main_lane_startpt = merge_point + polar(main_lane_length, 3*float(pi)/4)
+    curve = gen_straight_curve(main_lane_startpt, merge_point, n_pts)
+    append_to_curve!(curve, gen_straight_curve(merge_point, merge_point + polar(after_merge_length, 0.0), n_pts))
     main_lane = Lane(LaneTag(MAIN_LANE_ID, 1), curve, width = lane_width, speed_limit=SpeedLimit(0.,main_lane_vmax))
     push!(roadway.segments, RoadSegment(main_lane.tag.segment, [main_lane]))
 
-    # merge lane 
-    merge_lane_startpt = VecE2(0.0, 150.0)
-    merge_lane_midpt1 = VecE2(180.0, 150.0)
-    merge_lane_midpt2 = VecE2(800, 50)
-    merge_lane_endpt = VecE2(1000, 50)
-    curve = gen_straight_curve(merge_lane_startpt, merge_lane_midpt1, 2)
-    append_to_curve!(curve, gen_straight_curve(merge_lane_midpt1, merge_lane_midpt2, 2))
-    append_to_curve!(curve, gen_straight_curve(merge_lane_midpt2, merge_lane_endpt, 2))
-    merge_lane = Lane(LaneTag(MERGE_LANE_ID,1), curve, width = lane_width, speed_limit=SpeedLimit(0.,merge_lane_vmax))
+
+    # define merge lane 
+    merge_lane_startpt = merge_point + polar(merge_lane_length, -3*float(pi)/4)
+    curve = gen_straight_curve(merge_lane_startpt, merge_point, n_pts)
+    append_to_curve!(curve, gen_straight_curve(merge_point, merge_point + polar(after_merge_length, 0.0), n_pts))
+    merge_lane = Lane(LaneTag(MERGE_LANE_ID, 1), curve, width = lane_width, speed_limit=SpeedLimit(0.,merge_lane_vmax))
     push!(roadway.segments, RoadSegment(merge_lane.tag.segment, [merge_lane]))
 
     return roadway
