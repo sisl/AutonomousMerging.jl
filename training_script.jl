@@ -42,6 +42,13 @@ s = ArgParseSettings()
         help = "epsilon value at the end of the exploration phase"
         arg_type = Float64
         default = 0.01
+    "--learning_rate"
+        help = "learning rate for DQN"
+        arg_type = Float64
+        default = 1e-3
+    "--target_update_freq"
+        help = "target update frequency for DQN"
+        default = 5000
     "--logdir"
         help = "Directory in which to save the model and log training data"
         arg_type = String
@@ -56,6 +63,9 @@ s = ArgParseSettings()
         default = 5
     "--cooperation"
         help = "whether the ego vehicle observe the cooperation level or not"
+        action = :store_true
+    "--recurrent"
+        help = "whether to use an RNN in DQN"
         action = :store_true
 end
 parsed_args = parse_args(s)
@@ -74,18 +84,20 @@ svec = convert_s(Vector{Float64}, s0, mdp)
 
 input_dims = length(svec)
 
-
-
-model = Chain(Dense(input_dims, 64, relu), Dense(64, 32, relu), Dense(32, n_actions(mdp)))
+if parsed_args["recurrent"]
+    model = Chain(LSTM(input_dims, 64), Dense(64, 32, relu), Dense(32, n_actions(mdp)))
+else
+    model = Chain(Dense(input_dims, 64, relu), Dense(64, 32, relu), Dense(32, n_actions(mdp)))
+end
 solver = DeepQLearningSolver(qnetwork = model, 
                       max_steps = parsed_args["training_steps"],
                       eps_fraction = parsed_args["eps_fraction"],
                       eps_end = parsed_args["eps_end"],
                       eval_freq = 10_000,
                       save_freq = 10_000,
-                      target_update_freq = 5000,
+                      target_update_freq = parsed_args["target_update_freq"],
                       batch_size = 32, 
-                      learning_rate = 1e-3,
+                      learning_rate = parsed_args["learning_rate"],
                       train_start = 1000,
                       log_freq = 1000,
                       num_ep_eval = 1000,
@@ -93,6 +105,7 @@ solver = DeepQLearningSolver(qnetwork = model,
                       dueling = false,
                       prioritized_replay = true,
                       verbose = true, 
+                      recurrence = parsed_args["recurrent"],
                       rng = rng,
                       logdir = parsed_args["logdir"])
 

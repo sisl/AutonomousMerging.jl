@@ -79,7 +79,7 @@ function POMDPs.initialstate(mdp::GenerativeMergingMDP, rng::AbstractRNG)
             # mdp.driver_models[i] = IntelligentDriverModel()
             mdp.driver_models[i] = CooperativeIDM(c = rand(rng, [0.0,1.0]))
         end
-        mdp.driver_models[i].c = rand(rng, [0,1]) # change cooperativity
+        mdp.driver_models[i].c = iseven(i) ? 1.0 : 0.0 # rand(rng, [0,1]) # change cooperativity
         # mdp.driver_models[i].c = 0  # change cooperativity
         # mdp.driver_models[i].c = 1 # change cooperativity        
     end
