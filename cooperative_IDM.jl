@@ -1,7 +1,12 @@
 @with_kw mutable struct CooperativeIDM <: DriverModel{LaneFollowingAccel}
     env::MergingEnvironment = MergingEnvironment(main_lane_angle = 0.0, merge_lane_angle = pi/6)
     ttm_threshold::Float64 = 2.5 # threshold on the time to merge 
-    idm::IntelligentDriverModel = IntelligentDriverModel(v_des = env.main_lane_vmax, d_cmf = 2.0, d_max=3.0)
+    idm::IntelligentDriverModel = IntelligentDriverModel(v_des = env.main_lane_vmax, 
+                                                         d_cmf = 4.0, 
+                                                         d_max=4.0,
+                                                         T = 1.5,
+                                                         s_min = 2.0,
+                                                         a_max = 3.0)
     c::Float64 = 0.0 # cooperation level
     a_min::Float64 = -2.0 # minimum acceleration
     # internals
