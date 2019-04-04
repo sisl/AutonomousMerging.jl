@@ -124,6 +124,11 @@ avg_steps = mean(res[:steps])
 avg_dreward = mean(res[:dreward])
 avg_reward = mean(res[:reward])
 
+println("Collisions ", n_collisions)
+println("Avg steps ", avg_steps)
+println("avg disc reward ", avg_dreward)
+println("avg reward ", avg_reward)
+
 BSON.@save joinpath(parsed_args["logdir"], "policy_$(parsed_args["cooperation"]).bson") policy
 
 BSON.@save "results.bson" n_collisions avg_steps  avg_dreward avg_reward

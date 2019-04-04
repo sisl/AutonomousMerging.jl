@@ -28,9 +28,7 @@ includet("overlays.jl")
 
 rng = MersenneTwister(1)
 
-mdp = GenerativeMergingMDP(n_cars_main=8, observe_cooperation=true,
-                        default_driver_model = EgoDriver(LaneFollowingAccel(0.0)))
-default_driver_model = CooperativeIDM()
+mdp = GenerativeMergingMDP(n_cars_main=6, observe_cooperation=true)
 
 s0 = initialstate(mdp, rng)
 

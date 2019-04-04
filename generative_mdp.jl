@@ -43,13 +43,12 @@ A simulation environment for a highway merging scenario
     main_lane_slots::LinRange{Float64} = LinRange(0.0, 
                                             env.merge_lane_length + env.after_merge_length,
                                             n_max_agent_main)
-
     # reward params 
     collision_cost::Float64 = -1.0
     goal_reward::Float64 = 1.0
     
-
     # internal states 
+    mcts_mode::Bool = false
     driver_models::Dict{Int64, DriverModel} = Dict{Int64, DriverModel}(EGO_ID=>EgoDriver(LaneFollowingAccel(0.0)))    
 end
 
