@@ -17,6 +17,7 @@ using ProgressMeter
 using BenchmarkTools
 using Profile
 using ProfileView
+using Printf
 
 includet("environment.jl")
 includet("mdp_definition.jl")

@@ -18,7 +18,7 @@ using Reel
 using DiscreteValueIteration
 using SparseArrays
 using ProgressMeter
-using BSON: @save, @load
+using JLD2
 using FileIO
 
 
@@ -30,15 +30,17 @@ mdp = MergingMDP()
 
 @sprintf("Number of states: %i ", n_states(mdp))
 
-rm("transition.bson")
-trans_mat = DiscreteValueIteration.transition_matrix_a_s_sp(mdp)
-@save "transition.bson" trans_mat 
-rm("reward.bson")
-reward_mat = DiscreteValueIteration.reward_s_a(mdp)
-@save "reward.bson" reward_mat
+# rm("transition.jld2")
+tranfile = "/scratch/boutonm/transition_cv.jld2"
+trans_mat = DiscreteValueIteration.transition_matrix_a_s_sp(mdp, filename=tranfile)
+JLD2.@save tranfile trans_mat 
+# rm("reward.jld2")
+rewfile = "/scratch/boutonm/reward_cv.jld2"
+reward_mat = DiscreteValueIteration.reward_s_a(mdp, filename=rewfile)
+JLD2.@save rewfile reward_mat
 
 
-solver = SparseValueIterationSolver(max_iterations=200, verbose=true)
+solver = SparseValueIterationSolver(max_iterations=300, verbose=true)
 # solver = ValueIterationSolver(max_iterations=30, verbose=true)
 policy = solve(solver, mdp)
 
@@ -50,16 +52,20 @@ for (i, s) in enumerate(states(mdp))
     end
 end
 
-@save "policy.bson" policy
+# @save "policy_wide.jld2" policy
+# @save "/scratch/boutonm/policy_cv.jld2" policy
 
-@load "policy.bson" policy
+@load "policy_wide.jld2" policy
+policy_wide = deepcopy(policy)
+@load "policy_cv.jld2" policy
+policy_cv = deepcopy(policy)
 
 
 ## Evaluate policy 
 
 rng = MersenneTwister(1)
 randpol = RandomPolicy(mdp, rng=rng)
-s0 = [mdp.ego_grid[1], mdp.velocity_grid[1], mdp.acceleration_grid[3], mdp.human_grid[1], mdp.velocity_grid[1]]
+s0 = [mdp.ego_grid[1], mdp.velocity_grid[1], mdp.acceleration_grid[3], mdp.human_grid[1], mdp.velocity_grid[5]]
 
 
 simlist = [Sim(mdp, policy, s0, metadata=Dict(:policy=>"VI policy"),
@@ -90,13 +96,42 @@ end
 body!(w, ui)
 
 
-w = Window()
 ui = @manipulate for ve = mdp.velocity_grid, vo = mdp.velocity_grid
-    xs = mdp.ego_grid[1:13]
+    xs = mdp.ego_grid[1:end]
     ys = mdp.human_grid
     ae = mdp.acceleration_grid[3]
-    z = map(((y,x),) -> value(policy, [x, ve, ae, y, vo]), Iterators.product(ys, xs))
-    p = heatmap(xs, ys, z, aspect_ratio=1, xlabel="Ego longitudinal position", ylabel="Other longitudinal position")
+    z = map(((y,x),) -> value(policy, Float64[x, ve, ae, y, vo]), Iterators.product(ys, xs))
+    za = map(((y,x),) -> action(policy, Float64[x, ve, ae, y, vo]), Iterators.product(ys, xs))
+    plot(heatmap(xs, ys, z, aspect_ratio=1, xlabel="Ego longitudinal position", ylabel="Other longitudinal position", title="Pr of success", color=:plasma, clim=(0,1)),
+        heatmap(xs, ys, za, aspect_ratio=1, title="Action Map", color=:viridis, clim=(1,7)),
+        layout=(1,2))
+end
+body!(w, ui)
+
+
+
+for policy in [policy_wide, policy_cv]
+    policy.qmat = round.(policy_wide.qmat, digits=2)
+    policy.util = round.(policy.util, digits=2)
+end
+
+
+# w = Window()
+
+ui = @manipulate for ve = mdp.velocity_grid, vo = mdp.velocity_grid
+    plots = []
+    for (i, policy) in enumerate([policy_wide, policy_cv])
+        xs = mdp.ego_grid[1:end]
+        ys = mdp.human_grid
+        ae = mdp.acceleration_grid[3]
+        z = map(((y,x),) -> value(policy, Float64[x, ve, ae, y, vo]), Iterators.product(ys, xs))
+        title = i == 1 ? "Assume random" : "Assume CV"
+        xlabel = i == 1 ? "" : "Ego longitudinal position"
+        za = map(((y,x),) -> action(policy, Float64[x, ve, ae, y, vo]), Iterators.product(ys, xs))
+        push!(plots, heatmap(xs, ys, z, aspect_ratio=1, xlabel=xlabel, ylabel="Other longitudinal position", title=title, color=:plasma, clim=(0,1)))
+        push!(plots, heatmap(xs, ys, za, aspect_ratio=1, title=title, color=:viridis, clim=(1,7)))
+    end
+    plot(plots..., layout=(2,2))
 end
 body!(w, ui)
 
@@ -148,8 +183,8 @@ d = transition(mdp, s0, 2)
 sp = rand(rng, d)
 
 # DANGER
-rm("transition.bson")
-rm("reward.bson")
+rm("transition.jld2")
+rm("reward.jld2")
 
 
 
@@ -209,9 +244,9 @@ rm("reward.bson")
 # end
 
 # function DiscreteValueIteration.transition_matrix_a_s_sp(mdp::MDP)
-#     if isfile("transition.bson")
-#         @load "transition.bson" trans_mat
-#         @info "Loading transition from transition.bson"
+#     if isfile("transition.jld2")
+#         @load "transition.jld2" trans_mat
+#         @info "Loading transition from transition.jld2"
 #         return trans_mat
 #     else
 #         # Thanks to zach
@@ -246,9 +281,9 @@ rm("reward.bson")
 # end
 
 # function DiscreteValueIteration.reward_s_a(mdp::MDP)
-#     if isfile("reward.bson")
-#         @load "reward.bson" reward_mat
-#         @info "Loading reward from reward.bson"
+#     if isfile("reward.jld2")
+#         @load "reward.jld2" reward_mat
+#         @info "Loading reward from reward.jld2"
 #         return reward_mat
 #     else
 #         reward_S_A = fill(-Inf, (n_states(mdp), n_actions(mdp))) # set reward for all actions to -Inf unless they are in actions(mdp, s)
@@ -271,8 +306,8 @@ rm("reward.bson")
 # trans_mat = DiscreteValueIteration.transition_matrix_a_s_sp(mdp)
 # reward_mat = DiscreteValueIteration.reward_s_a(mdp)
 
-# @save "transition.bson" trans_mat 
-# @save "reward.bson" reward_mat
+# @save "transition.jld2" trans_mat 
+# @save "reward.jld2" reward_mat
 
 
 # solver = SparseValueIterationSolver(max_iterations=100, verbose=true)

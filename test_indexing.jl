@@ -26,11 +26,11 @@ testindexing(mdp)
 trans_prob_consistency_check(mdp)
 
 function POMDPTesting.trans_prob_consistency_check(pomdp::Union{MDP, POMDP})
-    # initalize space
+    # initalize spaces
     sspace = states(pomdp)
     aspace = actions(pomdp)
     # iterate through all s-a pairs
-    for s in sspace
+    @showprogress for s in sspace
         for a in aspace
             tran = transition(pomdp, s, a)
             p = 0.0

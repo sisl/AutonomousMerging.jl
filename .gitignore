@@ -1,3 +1,6 @@
 *.bson
 *.mp4
 *.webm
+*.gif
+*.jld2
+*log*/
