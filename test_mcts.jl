@@ -20,21 +20,22 @@ using TensorBoardLogger
 # using Interact
 # using Blink
 using MCTS
-using Reel
+
 
 includet("environment.jl")
 includet("generative_mdp.jl")
 includet("masking.jl")
 includet("cooperative_IDM.jl")
 includet("overlays.jl")
+includet("make_gif.jl");
 
 rng = MersenneTwister(1)
 
-mdp = GenerativeMergingMDP(n_cars_main=6, observe_cooperation=false)
+mdp = GenerativeMergingMDP(n_cars_main=8, observe_cooperation=true)
 
-solver = DPWSolver(depth = 20,
+solver = DPWSolver(depth = 40,
                    exploration_constant = 1.0,
-                   n_iterations = 1000, 
+                   n_iterations = 100, 
                    k_state  = 2.0, 
                    alpha_state = 0.2, 
                    keep_tree = true,
@@ -57,10 +58,17 @@ else
 end
 
 end # @everywhere
-# hr = HistoryRecorder(rng = rng, max_steps=100)
-# hist = simulate(hr, mdp, policy, s0);
 
-# includet("visualizer.jl");
+
+s0 = initialstate(mdp, rng)
+hr = HistoryRecorder(rng = rng, max_steps=100)
+@time hist = simulate(hr, mdp, policy, s0);
+@show n_steps(hist)
+
+includet("visualizer.jl");
+
+
+make_gif(hist, mdp)
 
 
 ## run many simulations

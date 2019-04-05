@@ -17,12 +17,14 @@ using TensorBoardLogger
 using ArgParse
 using BSON
 using CSV
+using LinearAlgebra
 includet("environment.jl")
 includet("generative_mdp.jl")
 includet("masking.jl")
 includet("cooperative_IDM.jl")
 includet("overlays.jl")
 
+BLAS.set_num_threads(8)
 
 s = ArgParseSettings()
 @add_arg_table s begin
@@ -45,7 +47,7 @@ s = ArgParseSettings()
     "--learning_rate"
         help = "learning rate for DQN"
         arg_type = Float64
-        default = 1e-3
+        default = 1e-4
     "--target_update_freq"
         help = "target update frequency for DQN"
         default = 5000
@@ -60,7 +62,7 @@ s = ArgParseSettings()
     "--n_cars"
         help = "Number of cars on the main road"
         arg_type = Int64
-        default = 5
+        default = 6
     "--cooperation"
         help = "whether the ego vehicle observe the cooperation level or not"
         action = :store_true

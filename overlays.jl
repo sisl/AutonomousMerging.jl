@@ -118,6 +118,7 @@ function AutoViz.render!(rendermodel::RenderModel, overlay::CooperativeIDMOverla
     scene::Scene, roadway::Roadway)
     observe!(overlay.model, scene, roadway, overlay.targetid)
     veh = get_by_id(scene, overlay.targetid)
+    mergeveh = get_by_id(scene, EGO_ID)
     textparams = overlay.textparams
     yₒ = textparams.y_start
     Δy = textparams.y_jump
@@ -132,8 +133,31 @@ function AutoViz.render!(rendermodel::RenderModel, overlay::CooperativeIDMOverla
     ego_ttm = overlay.model.ego_ttm 
     veh_ttm = overlay.model.veh_ttm
     # @show !(ego_ttm < 0.0 || ego_ttm = Inf || ego_ttm <= veh_ttm || veh_ttm == Inf)
-    drawtext(@sprintf("considering merge: %s", !(ego_ttm < 0.0 || ego_ttm == Inf || ego_ttm <= veh_ttm || veh_ttm == Inf)), yₒ + 7*Δy, rendermodel, textparams)
+    drawtext(@sprintf("considering merge: %s", !(ego_ttm < 0.0 || ego_ttm == Inf || ego_ttm <= veh_ttm || veh_ttm == Inf || mergeveh.state.posF.s < overlay.model.fov)), yₒ + 7*Δy, rendermodel, textparams)
     drawtext(@sprintf("driver ttm: %2.1f", overlay.model.ego_ttm), yₒ + 8*Δy, rendermodel, textparams)
     drawtext(@sprintf("merge ttm: %2.1f", overlay.model.veh_ttm), yₒ + 9*Δy, rendermodel, textparams)
     drawtext(@sprintf("front car %s", overlay.model.front_car), yₒ + 10*Δy, rendermodel, textparams)
 end
+
+function get_car_type_colors(scene::Scene, models::Dict{Int64, DriverModel};
+                             cooperative::Colorant = RGBA(0.0, 1., 0., 1.),
+                             aggressive::Colorant = RGBA(1.0,0.0,0.498, 1.),
+                             cooperative_slow::Colorant = RGBA(0.8, 0.9, 0., 1.),
+                             aggressive_slow::Colorant = RGBA(0.7,0.0,0.9, 1) )
+    color_dict = Dict{Int64, Colorant}()
+    for veh in scene
+        if veh.id == 1
+            color_dict[1] = COLOR_CAR_EGO
+        elseif models[veh.id].c == 1 && models[veh.id].idm.v_des < 15.0
+            color_dict[veh.id] = cooperative_slow
+        elseif models[veh.id].c == 0 && models[veh.id].idm.v_des < 15.0
+            color_dict[veh.id] = aggressive_slow
+        elseif models[veh.id].c == 1
+            color_dict[veh.id] = cooperative
+        elseif models[veh.id].c == 0
+            color_dict[veh.id] = aggressive
+        end
+    end   
+    return color_dict
+end
+

@@ -22,10 +22,11 @@ ui = @manipulate for step in 1:n_steps(hist)+1
           SceneOverlay[
                        IDOverlay(color=colorant"white",font_size=20),
                        MergingNeighborsOverlay(target_id=EGO_ID, env=mdp.env),
-                       DistToMergeOverlay(target_id=EGO_ID, env=mdp.env),
-                       DistToMergeOverlay(target_id=2, env=mdp.env),
-                       DistToMergeOverlay(target_id=3, env=mdp.env),
-                    #    CooperativeIDMOverlay(targetid=2, model=model, textparams=TextParams(size = 20, x = 100, y_start=300)),
+                    #    DistToMergeOverlay(target_id=EGO_ID, env=mdp.env),
+                    #    DistToMergeOverlay(target_id=2, env=mdp.env),
+                    #    DistToMergeOverlay(target_id=3, env=mdp.env),
+                    #    DistToMergeOverlay(target_id=6, env=mdp.env),
+                       CooperativeIDMOverlay(targetid=6, model=model, textparams=TextParams(size = 20, x = 100, y_start=300)),
                        MaskingOverlay(mdp=mdp, acc=s.ego_info.acc),
                        TextOverlay(text=[@sprintf("Acc %2.2f m/s^2", act), 
                                          @sprintf("Action %d", a), 
@@ -39,7 +40,9 @@ ui = @manipulate for step in 1:n_steps(hist)+1
         # cam = CarFollowCamera(1, 5.0),
         # cam = FitToContentCamera(0.0),
         cam = StaticCamera(VecE2(-25.0, -10.0), 6.0),
-          car_colors = Dict{Int64, Colorant}(1 => COLOR_CAR_EGO))
+        #   car_colors = Dict{Int64, Colorant}(1 => COLOR_CAR_EGO)
+        car_colors=get_car_type_colors(s0.scene, mdp.driver_models)
+        )
 end
 
 w = Window()

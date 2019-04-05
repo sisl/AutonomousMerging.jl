@@ -26,30 +26,39 @@ includet("overlays.jl")
 
 rng = MersenneTwister(1)
 
-mdp = GenerativeMergingMDP(n_cars_main=6, observe_cooperation = true)
+mdp = GenerativeMergingMDP(n_cars_main=8, observe_cooperation = true, initial_ego_velocity=0.0)
 
 policy = RandomPolicy(mdp, rng=rng)
+
+policy = FunctionPolicy(s->4)
+
 # policy = MaskedRandomPolicy(mdp, rng)
+mdp.max_burn_in = 20
 s0 = initialstate(mdp, rng)
+
+scene = s0.scene
+AutoViz.render(scene, mdp.env.roadway, [IDOverlay()], car_colors=get_car_type_colors(scene, mdp.driver_models), cam=StaticCamera(VecE2(-25.0, -10.0), 6.0))
+
 hr = HistoryRecorder(rng = rng, max_steps=100)
 hist = simulate(hr, mdp, policy, s0)
 
-# include("visualizer.jl");
+include("visualizer.jl");
 
 s = hist.state_hist[end-5]
 s = s0
 AutoViz.render(s.scene, mdp.env.roadway, 
           SceneOverlay[IDOverlay(),
                        MergingNeighborsOverlay(target_id=EGO_ID, env=mdp.env),
-                       DistToMergeOverlay(target_id=EGO_ID, env=mdp.env),
-                       DistToMergeOverlay(target_id=2, env=mdp.env),
+                    #    DistToMergeOverlay(target_id=EGO_ID, env=mdp.env),
+                    #    DistToMergeOverlay(target_id=2, env=mdp.env),
                        MaskingOverlay(mdp=mdp),
                     #    NeighborsOverlay(EGO_ID),
                     #    CarFollowingStatsOverlay(EGO_ID), 
                         ],
         #   cam=CarFollowCamera(EGO_ID, 5.0),
         cam = StaticCamera(VecE2(-25.0, -10.0), 6.0), 
-          car_colors = Dict{Int64, Colorant}(1 => COLOR_CAR_EGO))
+         car_colors=get_car_type_colors(s0.scene, mdp.driver_models))
+        #   car_colors = Dict{Int64, Colorant}(1 => COLOR_CAR_EGO))
 
 svec = convert_s(Vector{Float64}, s, mdp)
 srec = convert_s(AugScene, svec, mdp)
@@ -67,24 +76,12 @@ AutoViz.render(srec.scene, mdp.env.roadway,
         cam = StaticCamera(VecE2(-25.0, -10.0), 6.0),
           car_colors = Dict{Int64, Colorant}(1 => COLOR_CAR_EGO))
 
-frames = Frames(MIME("image/png"), fps=4);
-for step in 1:n_steps(hist)
-    s = hist.state_hist[step+1]
-    a = hist.action_hist[step]
-    f = AutoViz.render(s.scene, mdp.env.roadway, 
-          SceneOverlay[
-                       IDOverlay(),
-                       MergingNeighborsOverlay(target_id=EGO_ID, env=mdp.env),
-                       DistToMergeOverlay(target_id=EGO_ID, env=mdp.env)
-                       #    NeighborsOverlay(EGO_ID),
-                    #    CarFollowingStatsOverlay(EGO_ID), 
-                        ],
-          cam=CarFollowCamera(EGO_ID, 10.0), 
-          car_colors = Dict{Int64, Colorant}(1 => COLOR_CAR_EGO))
-    push!(frames, f)
-end
 
-write("out.gif", frames)
+s0 = initialstate(mdp, rng)
+hr = HistoryRecorder(rng = rng, max_steps=100)
+@time hist = simulate(hr, mdp, policy, s0)
+
+
 
 scene = hist.state_hist[2].scene
 get_neighbor_rear_along_left_lane(scene, 1, mdp.env.roadway, VehicleTargetPointRear(), VehicleTargetPointFront(), VehicleTargetPointRear())

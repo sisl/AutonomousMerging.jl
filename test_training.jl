@@ -28,7 +28,7 @@ includet("overlays.jl")
 
 rng = MersenneTwister(1)
 
-mdp = GenerativeMergingMDP(n_cars_main=6, observe_cooperation=true)
+mdp = GenerativeMergingMDP(n_cars_main=8, observe_cooperation=true)
 
 s0 = initialstate(mdp, rng)
 
@@ -58,7 +58,12 @@ solver = DeepQLearningSolver(qnetwork = model,
 # solver.exploration_policy = masked_linear_epsilon_greedy(solver.max_steps, solver.eps_fraction, solver.eps_end)
 # solver.evaluation_policy = masked_evaluation()
 
+
 policy = solve(solver, mdp)
+
+using BSON
+
+BSON.@load joinpath(solver.logdir,"policy_true.bson") policy
 
 env = MDPEnvironment(mdp)
 DeepQLearning.evaluation(solver.evaluation_policy, 

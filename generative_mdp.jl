@@ -3,7 +3,7 @@
 const EGO_ID = 1
 const HARD_BRAKE = 1
 const RELEASE = 7
-const WRAP_AROUND_TOL = 10.0
+const WRAP_AROUND_TOL = 2.0
 
 """
     AugScene
@@ -37,11 +37,13 @@ A simulation environment for a highway merging scenario
     default_driver_model::DriverModel{LaneFollowingAccel} = IntelligentDriverModel(v_des=env.main_lane_vmax)
     observe_cooperation::Bool = false
     # initial state params
-    initial_ego_velocity::Float64 = 15.0
+    max_burn_in::Int64 = 20
+    min_burn_in::Int64 = 10
+    initial_ego_velocity::Float64 = 10.0
     initial_velocity::Float64 = 15.0
     initial_velocity_std::Float64 = 1.0
     main_lane_slots::LinRange{Float64} = LinRange(0.0, 
-                                            env.merge_lane_length + env.after_merge_length,
+                                            env.main_lane_length + env.after_merge_length,
                                             n_max_agent_main)
     # reward params 
     collision_cost::Float64 = -1.0
@@ -59,30 +61,50 @@ POMDPs.actionindex(mdp::GenerativeMergingMDP, a::Int64) = a
 
 function POMDPs.initialstate(mdp::GenerativeMergingMDP, rng::AbstractRNG)
     s0 = Scene()
-    # start_positions = sample(rng, mdp.main_lane_slots, mdp.n_cars_main, replace=false)   
+    start_positions = sample(rng, mdp.main_lane_slots, mdp.n_cars_main, replace=false)   
     # maximum_gap = div(length(mdp.main_lane_slots), mdp.n_cars_main + 1)
-    start_positions = spread_out_initialization(mdp, rng)
+    # start_positions = spread_out_initialization(mdp, rng)
     # start_positions = mdp.main_lane_slots1:maximum_gap:length(mdp.main_lane_slots)]
     start_velocities = mdp.initial_velocity .+ mdp.initial_velocity_std*randn(rng, mdp.n_cars_main)
     ego = initial_merge_car_state(mdp, rng, EGO_ID)
-    push!(s0, ego)
     ego_acc_0 = 0.0
+    scene = s0
     for i=EGO_ID+1:EGO_ID+mdp.n_cars_main
         veh_state = vehicle_state(start_positions[i - EGO_ID], main_lane(mdp.env),
-                                  start_velocities[i - EGO_ID], mdp.env.roadway)
+        start_velocities[i - EGO_ID], mdp.env.roadway)
         veh = Vehicle(veh_state, mdp.car_def, i)
         push!(s0, veh)
         if !haskey(mdp.driver_models, i)
             # mdp.driver_models[i] = IntelligentDriverModel() #TODO parameterize
             # mdp.driver_models[i] = EgoDriver(LaneFollowingAccel(0.0))
             # mdp.driver_models[i] = IntelligentDriverModel()
-            mdp.driver_models[i] = CooperativeIDM(c = rand(rng, [0.0,1.0]))
+            mdp.driver_models[i] = CooperativeIDM()
         end
-        mdp.driver_models[i].c = iseven(i) ? 1.0 : 0.0 # rand(rng, [0,1]) # change cooperativity
+        v_des = sample(rng, [5.0, 15.0], Weights([0.3, 0.7]))
+        set_desired_speed!(mdp.driver_models[i], v_des)
+        mdp.driver_models[i].c = rand(rng, [0,1]) # change cooperativity
         # mdp.driver_models[i].c = 0  # change cooperativity
         # mdp.driver_models[i].c = 1 # change cooperativity        
     end
-    return AugScene(s0, (acc=ego_acc_0,))
+    # burn in 
+    acts = Vector{LaneFollowingAccel}(undef, mdp.n_cars_main)
+    burn_in =rand(rng, mdp.min_burn_in:mdp.max_burn_in)
+    # burn_in = 0
+    scene = s0
+    for t=1:burn_in
+        get_actions!(acts, scene, mdp.env.roadway, mdp.driver_models)
+        tick!(scene, mdp.env.roadway, acts, mdp.dt)
+        for (i, veh) in enumerate(scene)
+            scene[i] = clamp_speed(mdp.env, veh)
+            scene[i] = wrap_around(mdp.env, scene[i]) 
+        end
+    end
+    s = Scene()
+    push!(s, ego)
+    for veh in scene
+        push!(s, veh)
+    end
+    return AugScene(s, (acc=ego_acc_0,))
 end    
 
 function POMDPs.reward(mdp::GenerativeMergingMDP, s::AugScene, a::Int64, sp::AugScene)
@@ -105,9 +127,6 @@ function POMDPs.generate_s(mdp::GenerativeMergingMDP, s::AugScene, a::Int64, rng
     mdp.driver_models[EGO_ID].a = action_map(mdp, s.ego_info.acc, a)
     ego_acc = mdp.driver_models[EGO_ID].a.a
     acts = Vector{LaneFollowingAccel}(undef, mdp.n_agents)
-    for (i, veh) in enumerate(scene)
-        scene[i] = wrap_around(mdp.env, veh) 
-    end
 
     # call driver models 
     for i=EGO_ID+1:EGO_ID+mdp.n_cars_main
@@ -119,8 +138,10 @@ function POMDPs.generate_s(mdp::GenerativeMergingMDP, s::AugScene, a::Int64, rng
     tick!(scene, mdp.env.roadway, acts, mdp.dt)
 
     # clamp speed 
-    egoind = findfirst(EGO_ID, scene)
-    scene[egoind] = clamp_speed(mdp.env, scene[egoind])
+    for (i, veh) in enumerate(scene)
+        scene[i] = clamp_speed(mdp.env, veh)
+        scene[i] = wrap_around(mdp.env, scene[i]) 
+    end
 
     return AugScene(scene, (acc=ego_acc,))
 end
@@ -323,7 +344,7 @@ function wrap_around(env::MergingEnvironment, veh::Vehicle)
 end
 
 function clamp_speed(env::MergingEnvironment, veh::Vehicle)
-    v = clamp(veh.state.v, 0.0, env.main_lane_vmax)
+    v = clamp(veh.state.v, 1.0, env.main_lane_vmax)
     vehstate = VehicleState(veh.state.posG, veh.state.posF, v)
     return Vehicle(vehstate, veh.def, veh.id)
 end

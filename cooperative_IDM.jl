@@ -8,6 +8,7 @@
                                                          s_min = 2.0,
                                                          a_max = 3.0)
     c::Float64 = 0.0 # cooperation level
+    fov::Float64 = 20.0 # when to consider merge car
     a_min::Float64 = -2.0 # minimum acceleration
     # internals
     a::Float64 = 0.0
@@ -32,16 +33,31 @@ function AutomotiveDrivingModels.reset_hidden_state!(model::CooperativeIDM)
     model.dist_at_merge = 0.0
 end
 
+function AutomotiveDrivingModels.set_desired_speed!(model::CooperativeIDM, vdes::Float64)
+    set_desired_speed!(model.idm, vdes)
+end
+
 function AutomotiveDrivingModels.observe!(model::CooperativeIDM, scene::Scene, roadway::Roadway, egoid::Int64)
-    observe!(model.idm, scene, roadway, egoid)
+    ego_ind = findfirst(egoid, scene)
+    ego = scene[ego_ind]
+    fore = get_neighbor_fore_along_lane(scene, ego_ind, roadway, VehicleTargetPointFront(), VehicleTargetPointRear(), VehicleTargetPointFront())
+    if fore.ind == nothing # uses the first vehicle on the lain as neighbor
+
+        vehmin, vehind = findfirst_lane(scene, main_lane(model.env))
+        headway = get_end(main_lane(model.env)) - ego.state.posF.s + vehmin.state.posF.s
+        track_longitudinal!(model.idm, ego.state.v, vehmin.state.v, headway)
+        # @printf("No neighbor, ID: %d | neighbor %d | headway %2.1f \n", egoid, scene[vehind].id, headway)
+    else
+        # @printf("ID: %d | neighbor %d \n", egoid, scene[fore.ind].id)
+        observe!(model.idm, scene, roadway, egoid)
+    end
     a_idm = model.idm.a
     model.a_idm = a_idm 
     veh = find_merge_vehicle(model.env, scene)
-    if veh == nothing 
+    if veh == nothing || veh.state.posF.s < model.fov
         # println("No merge vehicle")
         model.a = model.a_idm
     else
-        ego = get_by_id(scene, egoid)
         model.a
         ego_ttm = time_to_merge(model.env, ego, model.a)
         veh_ttm = time_to_merge(model.env, veh, model.other_acc)
@@ -96,7 +112,22 @@ function AutomotiveDrivingModels.observe!(model::CooperativeIDM, scene::Scene, r
     return model
 end
 
-
+"""
+find the first vehicle on the lane
+"""
+function findfirst_lane(scene::Scene, lane::Lane)
+    s_min = Inf
+    vehmin = nothing
+    vehind = nothing 
+    for (i, veh) in enumerate(scene)
+        if veh.state.posF.roadind.tag == lane.tag && veh.state.posF.s < s_min
+            s_min = veh.state.posF.s
+            vehmin = veh
+            vehind = i
+        end
+    end
+    return vehmin, vehind
+end
 # function AutomotiveDrivingModels.observe!(model::CooperativeIDM, scene::Scene, roadway::Roadway, egoid::Int)
 #     observe!(model.idm, scene, roadway, egoid)
 #     a_idm = model.idm.a
