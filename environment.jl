@@ -223,7 +223,7 @@ function constant_acceleration_prediction(env::MergingEnvironment,
                                           acc::Float64,
                                           time::Float64)
         act = LaneFollowingAccel(acc)
-        vehp = propagate(veh, act, env.roadway, time)
+        vehp = propagate(veh, act, env.roadway, time, true)
         return Vehicle(vehp, veh.def, veh.id)
 end
 
@@ -262,4 +262,43 @@ end
 function braking_distance(v::Float64, t_coll::Float64, acc::Float64)
     brake_dist = v*t_coll + 0.5*acc*t_coll^2
     return brake_dist
+end
+
+function AutomotiveDrivingModels.propagate(veh::Entity{VehicleState,D,I}, action::LaneFollowingAccel, roadway::Roadway, ΔT::Float64, nobackup::Bool) where {D,I}
+
+    a_lon = action.a
+
+    ds = veh.state.v
+
+    ΔT² = ΔT*ΔT
+
+    Δs = ds*ΔT + 0.5*a_lon*ΔT²
+    v₂ = ds + a_lon*ΔT
+
+    if nobackup
+        Δs = max(Δs, 0.0)
+        v₂ = max(v₂, 0.0)
+    end
+
+    roadind = move_along(veh.state.posF.roadind, roadway, Δs)
+    posG = roadway[roadind].pos
+    posF = Frenet(roadind, roadway, t=veh.state.posF.t, ϕ=veh.state.posF.ϕ)
+    VehicleState(posG, posF, v₂)
+end
+
+function AutomotiveDrivingModels.tick!(
+    scene::EntityFrame{S,D,I},
+    roadway::R,
+    actions::Vector{LaneFollowingAccel},
+    Δt::Float64,
+    nobackup::Bool
+    ) where {S,D,I,R}
+
+    for i in 1 : length(scene)
+        veh = scene[i]
+        state′ = propagate(veh, actions[i], roadway, Δt, nobackup)
+        scene[i] = Entity(state′, veh.def, veh.id)
+    end
+
+    return scene
 end

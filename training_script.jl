@@ -112,7 +112,14 @@ solver = DeepQLearningSolver(qnetwork = model,
                       logdir = parsed_args["logdir"])
 
 
-policy = solve(solver, mdp)
+@time policy = solve(solver, mdp)
+
+env = MDPEnvironment(mdp)
+DeepQLearning.evaluation(solver.evaluation_policy, 
+                policy, env,                                  
+                solver.num_ep_eval,
+                solver.max_episode_length,
+                solver.verbose)
 
 simlist = [Sim(mdp, policy,
 rng=MersenneTwister(i), max_steps=200) for i=1:parsed_args["n_eval"]];

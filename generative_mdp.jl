@@ -48,6 +48,7 @@ A simulation environment for a highway merging scenario
     # reward params 
     collision_cost::Float64 = -1.0
     goal_reward::Float64 = 1.0
+    hard_brake_cost::Float64 = 0.0
     
     # internal states 
     mcts_mode::Bool = false
@@ -74,13 +75,13 @@ function POMDPs.initialstate(mdp::GenerativeMergingMDP, rng::AbstractRNG)
         start_velocities[i - EGO_ID], mdp.env.roadway)
         veh = Vehicle(veh_state, mdp.car_def, i)
         push!(s0, veh)
-        if !haskey(mdp.driver_models, i)
+        # if !haskey(mdp.driver_models, i)
             # mdp.driver_models[i] = IntelligentDriverModel() #TODO parameterize
             # mdp.driver_models[i] = EgoDriver(LaneFollowingAccel(0.0))
             # mdp.driver_models[i] = IntelligentDriverModel()
-            mdp.driver_models[i] = CooperativeIDM()
-        end
-        v_des = sample(rng, [5.0, 15.0], Weights([0.3, 0.7]))
+        mdp.driver_models[i] = CooperativeIDM()
+        # end
+        v_des = sample(rng, [5.0, 10., 15.0], Weights([0.2, 0.3, 0.5]))
         set_desired_speed!(mdp.driver_models[i], v_des)
         mdp.driver_models[i].c = rand(rng, [0,1]) # change cooperativity
         # mdp.driver_models[i].c = 0  # change cooperativity
@@ -93,9 +94,9 @@ function POMDPs.initialstate(mdp::GenerativeMergingMDP, rng::AbstractRNG)
     scene = s0
     for t=1:burn_in
         get_actions!(acts, scene, mdp.env.roadway, mdp.driver_models)
-        tick!(scene, mdp.env.roadway, acts, mdp.dt)
+        tick!(scene, mdp.env.roadway, acts, mdp.dt, true)
         for (i, veh) in enumerate(scene)
-            scene[i] = clamp_speed(mdp.env, veh)
+            # scene[i] = clamp_speed(mdp.env, veh)
             scene[i] = wrap_around(mdp.env, scene[i]) 
         end
     end
@@ -114,6 +115,9 @@ function POMDPs.reward(mdp::GenerativeMergingMDP, s::AugScene, a::Int64, sp::Aug
        r += mdp.goal_reward    
     elseif is_crash(sp.scene)
         r += mdp.collision_cost
+    end
+    if caused_hard_brake(mdp, sp.scene)
+        r += mdp.hard_brake_cost
     end
     return r
 end
@@ -135,11 +139,11 @@ function POMDPs.generate_s(mdp::GenerativeMergingMDP, s::AugScene, a::Int64, rng
     get_actions!(acts, scene, mdp.env.roadway, mdp.driver_models)
 
     # update scene 
-    tick!(scene, mdp.env.roadway, acts, mdp.dt)
+    tick!(scene, mdp.env.roadway, acts, mdp.dt, true)
 
     # clamp speed 
     for (i, veh) in enumerate(scene)
-        scene[i] = clamp_speed(mdp.env, veh)
+        # scene[i] = clamp_speed(mdp.env, veh)
         scene[i] = wrap_around(mdp.env, scene[i]) 
     end
 
@@ -311,6 +315,16 @@ function reachgoal(mdp::GenerativeMergingMDP, ego::Vehicle)
     lane = get_lane(mdp.env.roadway, ego)
     s = ego.state.posF.s
     return lane.tag == main_lane(mdp.env).tag && s >= get_end(lane)
+end
+
+function caused_hard_brake(mdp::GenerativeMergingMDP, scene::Scene)
+    ego_ind = findfirst(EGO_ID, scene)
+    fore_res = get_neighbor_rear_along_lane(scene, ego_ind, mdp.env.roadway)
+    if fore_res.ind == nothing 
+        return false
+    else
+        return mdp.driver_models[fore_res.ind].a <= mdp.driver_models[fore_res.ind].idm.d_max
+    end
 end
 
 function action_map(mdp::GenerativeMergingMDP, acc::Float64, a::Int64)

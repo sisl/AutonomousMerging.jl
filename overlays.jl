@@ -133,7 +133,8 @@ function AutoViz.render!(rendermodel::RenderModel, overlay::CooperativeIDMOverla
     ego_ttm = overlay.model.ego_ttm 
     veh_ttm = overlay.model.veh_ttm
     # @show !(ego_ttm < 0.0 || ego_ttm = Inf || ego_ttm <= veh_ttm || veh_ttm == Inf)
-    drawtext(@sprintf("considering merge: %s", !(ego_ttm < 0.0 || ego_ttm == Inf || ego_ttm <= veh_ttm || veh_ttm == Inf || mergeveh.state.posF.s < overlay.model.fov)), yₒ + 7*Δy, rendermodel, textparams)
+    # drawtext(@sprintf("considering merge: %s", !(ego_ttm < 0.0 || ego_ttm == Inf || ego_ttm < veh_ttm || veh_ttm == Inf || mergeveh.state.posF.s < overlay.model.fov)), yₒ + 7*Δy, rendermodel, textparams)
+    drawtext(@sprintf("considering merge: %s", model.consider_merge), yₒ + 7*Δy, rendermodel, textparams)
     drawtext(@sprintf("driver ttm: %2.1f", overlay.model.ego_ttm), yₒ + 8*Δy, rendermodel, textparams)
     drawtext(@sprintf("merge ttm: %2.1f", overlay.model.veh_ttm), yₒ + 9*Δy, rendermodel, textparams)
     drawtext(@sprintf("front car %s", overlay.model.front_car), yₒ + 10*Δy, rendermodel, textparams)

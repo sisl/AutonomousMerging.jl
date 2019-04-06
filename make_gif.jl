@@ -19,6 +19,7 @@ function make_gif(hist, mdp)
                         MergingNeighborsOverlay(target_id=EGO_ID, env=mdp.env),
                         DistToMergeOverlay(target_id=EGO_ID, env=mdp.env),
                         DistToMergeOverlay(target_id=2, env=mdp.env),
+                        CooperativeIDMOverlay(targetid=2, model=model, textparams=TextParams(size = 20, x = 100, y_start=300)),
                         TextOverlay(text=[@sprintf("Acc %2.2f m/s^2", act), 
                                             @sprintf("Action %d", a), 
                                             @sprintf("Time %2.1f", mdp.dt*step)], 

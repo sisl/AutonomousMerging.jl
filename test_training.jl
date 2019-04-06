@@ -28,7 +28,7 @@ includet("overlays.jl")
 
 rng = MersenneTwister(1)
 
-mdp = GenerativeMergingMDP(n_cars_main=8, observe_cooperation=true)
+mdp = GenerativeMergingMDP(n_cars_main=6, observe_cooperation=true)
 
 s0 = initialstate(mdp, rng)
 
@@ -37,16 +37,16 @@ svec = convert_s(Vector{Float64}, s0, mdp)
 input_dims = length(svec)
 
 
-model = Chain(Dense(input_dims, 64, relu), Dense(64, 32, relu), Dense(32,32,relu), Dense(32, n_actions(mdp)))
+model = Chain(Dense(input_dims, 64, relu), Dense(64, 32, relu), Dense(32, n_actions(mdp)))
 solver = DeepQLearningSolver(qnetwork = model, 
                       max_steps = 1_000_000,
                       eps_fraction = 0.5,
                       eps_end = 0.01,
                       eval_freq = 10_000,
                       save_freq = 10_000,
-                      target_update_freq = 10000,
+                      target_update_freq = 5000,
                       batch_size = 32, 
-                      learning_rate = 1e-3,
+                      learning_rate = 1e-4,
                       train_start = 1000,
                       log_freq = 1000,
                       num_ep_eval = 1000,

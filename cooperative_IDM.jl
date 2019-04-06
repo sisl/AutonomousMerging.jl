@@ -15,11 +15,12 @@
     a_merge::Float64 = 0.0
     a_idm::Float64 = 0.0
     other_acc::Float64 = 0.0
-    s_des::Float64 = 0.0
+    s_des::Float64 = idm.s_min
     dist_at_merge::Float64 = 0.0
     ego_ttm::Float64 = 0.0
     veh_ttm::Float64 = 0.0
     front_car::Bool = false
+    consider_merge::Bool = false
 end
 
 Base.rand(model::CooperativeIDM) = LaneFollowingAccel(model.a)
@@ -29,7 +30,7 @@ function AutomotiveDrivingModels.reset_hidden_state!(model::CooperativeIDM)
     model.a_merge = 0.0
     model.a_idm = 0.0
     model.other_acc = 0.0
-    model.s_des = 0.0
+    model.s_des = model.idm.s_min
     model.dist_at_merge = 0.0
 end
 
@@ -39,6 +40,7 @@ end
 
 function AutomotiveDrivingModels.observe!(model::CooperativeIDM, scene::Scene, roadway::Roadway, egoid::Int64)
     ego_ind = findfirst(egoid, scene)
+    # @printf("OBSERVE COOPERATIVE IDM \n")
     ego = scene[ego_ind]
     fore = get_neighbor_fore_along_lane(scene, ego_ind, roadway, VehicleTargetPointFront(), VehicleTargetPointRear(), VehicleTargetPointFront())
     if fore.ind == nothing # uses the first vehicle on the lain as neighbor
@@ -58,16 +60,21 @@ function AutomotiveDrivingModels.observe!(model::CooperativeIDM, scene::Scene, r
         # println("No merge vehicle")
         model.a = model.a_idm
     else
+        model.other_acc = 0.0
+        model.a = 0.0
         model.a
         ego_ttm = time_to_merge(model.env, ego, model.a)
         veh_ttm = time_to_merge(model.env, veh, model.other_acc)
         model.ego_ttm = ego_ttm
         model.veh_ttm = veh_ttm
-        if ego_ttm < 0.0 || ego_ttm == Inf || ego_ttm <= veh_ttm || veh_ttm == Inf 
+        if ( ego_ttm < 0.0 || ego_ttm < veh_ttm || veh_ttm == Inf)
             # println("Ego TTM < Merge TTM, ignoring")
+            ego_ttm < veh_ttm
+            model.consider_merge = false
             model.a = model.a_idm
             model.front_car = false
         else
+            model.consider_merge = true
             # println("Ego TTM >= Merge TTM, predicting")
             vehp = constant_acceleration_prediction(model.env, veh, model.other_acc, veh_ttm)
             egop = constant_acceleration_prediction(model.env, ego, model.a, veh_ttm)
@@ -87,13 +94,13 @@ function AutomotiveDrivingModels.observe!(model::CooperativeIDM, scene::Scene, r
             # @show dist_at_merge
             # @show s_des
             model.s_des = s_des
-            if dist_at_merge > s_des
+            if dist_at_merge > model.c*s_des
                 # println("predicted distance at merge > s_des, ignoring")
                 model.a = model.a_idm
                 model.front_car = false
             # elseif dist_at_merge <= d_brake
             # elseif dist_at_merge <= s_des + (1 - model.c)*(d_brake - s_des)
-            elseif dist_at_merge < model.c*s_des
+            elseif dist_at_merge <= model.c*s_des
                 # if d_brake <= dist_at_merge
                     # println("critical distance predicted")
                 # end
