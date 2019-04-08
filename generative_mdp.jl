@@ -36,6 +36,7 @@ A simulation environment for a highway merging scenario
     ego_idm::IntelligentDriverModel = IntelligentDriverModel(σ=0.0, v_des=env.main_lane_vmax)
     default_driver_model::DriverModel{LaneFollowingAccel} = IntelligentDriverModel(v_des=env.main_lane_vmax)
     observe_cooperation::Bool = false
+    observe_speed::Bool = true
     # initial state params
     traffic_speed::Symbol = :mixed
     random_n_cars::Bool = false
@@ -66,7 +67,7 @@ POMDPs.actionindex(mdp::GenerativeMergingMDP, a::Int64) = a
 function POMDPs.initialstate(mdp::GenerativeMergingMDP, rng::AbstractRNG)
     s0 = Scene()
     if mdp.random_n_cars
-        mdp.n_cars_main = rand(rng, mpd.n_cars_main:mdp.n_cars_main+2)
+        mdp.n_cars_main = rand(rng, mdp.n_max_agent_main-2:mdp.n_max_agent_main)
     end
     mdp.driver_models = Dict{Int64, DriverModel}(EGO_ID=>EgoDriver(LaneFollowingAccel(0.0)))
     start_positions = sample(rng, mdp.main_lane_slots, mdp.n_cars_main, replace=false)   
@@ -209,7 +210,11 @@ function extract_features(mdp::GenerativeMergingMDP, s::AugScene)
         v_oth = scene[fore.ind].state.v
         headway = fore.Δs
         features[4] = headway
-        features[5] = v_oth
+        if mdp.observe_speed
+            features[5] = v_oth
+        else
+            features[5] = 0.0
+        end
         if mdp.observe_cooperation
             features[6] = mdp.driver_models[fore_id].c
         else
@@ -225,7 +230,11 @@ function extract_features(mdp::GenerativeMergingMDP, s::AugScene)
         v_oth_main_fore = scene[fore_main.ind].state.v
         headway_main_fore = fore_main.Δs
         features[7] = headway_main_fore
-        features[8] = v_oth_main_fore
+        if mdp.observe_speed
+            features[8] = v_oth_main_fore
+        else
+            features[8] = 0.0
+        end
         if mdp.observe_cooperation
             features[9] = mdp.driver_models[fore_main_id].c
         else
@@ -238,7 +247,11 @@ function extract_features(mdp::GenerativeMergingMDP, s::AugScene)
         v_oth_main_rear = scene[rear_main.ind].state.v
         headway_main_rear = rear_main.Δs
         features[10] = headway_main_rear
-        features[11] = v_oth_main_rear
+        if mdp.observe_speed
+            features[11] = v_oth_main_rear
+        else
+            features[11] = 0.0
+        end
         if mdp.observe_cooperation
             features[12] = mdp.driver_models[rear_main_id].c
         else
@@ -253,7 +266,11 @@ function extract_features(mdp::GenerativeMergingMDP, s::AugScene)
         v_oth = scene[merge.ind].state.v
         headway = merge.Δs
         features[13] = headway
-        features[14] = v_oth
+        if mdp.observe_speed
+            features[14] = v_oth
+        else
+            features[14] = 0.0
+        end
         if mdp.observe_cooperation
             features[15] = mdp.driver_models[merge_id].c
         else
