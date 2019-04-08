@@ -66,9 +66,6 @@ s = ArgParseSettings()
     "--cooperation"
         help = "whether the ego vehicle observe the cooperation level or not"
         action = :store_true
-    "--random_n_cars"
-        help = "whether the initial number of cars is random"
-        action = :store_true
     "--driver_type"
         help = "the distribution of driver types, choose among cooperative, aggressive or random"
         arg_type = String
@@ -91,10 +88,10 @@ Random.seed!(seed)
 rng = MersenneTwister(seed)
 
 
-mdp = GenerativeMergingMDP(random_n_cars = parsed_args["random_n_cars"],
+mdp = GenerativeMergingMDP(random_n_cars = true,
                            driver_type = Symbol(parsed_args["driver_type"]),
                            traffic_speed = Symbol(parsed_args["traffic_speed"]),
-                           n_cars_main=parsed_args["n_cars"], 
+                           n_max_agents_main=parsed_args["n_cars"], 
                            observe_cooperation=parsed_args["cooperation"])
 
 s0 = initialstate(mdp, rng)
