@@ -221,9 +221,21 @@ end
 function constant_acceleration_prediction(env::MergingEnvironment, 
                                           veh::Vehicle,
                                           acc::Float64,
-                                          time::Float64)
-        act = LaneFollowingAccel(acc)
-        vehp = propagate(veh, act, env.roadway, time, true)
+                                          time::Float64,
+                                          v_des::Float64)
+        # act = LaneFollowingAccel(acc)
+        # vehp = propagate(veh, act, env.roadway, time, true)
+        v1 = veh.state.v
+        v2 = clamp(veh.state.v + acc*time , 0.0, v_des)
+        if acc ≈ 0.0
+            Δs = v1*time
+        else
+            Δs = (v2^2 - v1^2) / (2*acc)
+        end
+        Δs = max(0., Δs)
+        sp = veh.state.posF.s + Δs
+        lane = get_lane(env.roadway, veh)
+        vehp = vehicle_state(sp, lane, v2, env.roadway)
         return Vehicle(vehp, veh.def, veh.id)
 end
 

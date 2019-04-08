@@ -26,14 +26,12 @@ includet("overlays.jl")
 
 rng = MersenneTwister(1)
 
-mdp = GenerativeMergingMDP(n_cars_main=8, observe_cooperation = true, initial_ego_velocity=0.0)
+mdp = GenerativeMergingMDP(n_cars_main=8, driver_type = :random, observe_cooperation = true, initial_ego_velocity=0.0)
 
 policy = RandomPolicy(mdp, rng=rng)
 
 policy = FunctionPolicy(s->4)
 
-# policy = MaskedRandomPolicy(mdp, rng)
-mdp.max_burn_in = 20
 s0 = initialstate(mdp, rng)
 
 scene = s0.scene
@@ -103,7 +101,6 @@ ui = @manipulate for step in 1:n_steps(hist)
           car_colors = Dict{Int64, Colorant}(1 => COLOR_CAR_EGO))
 end
 body!(w, ui)
-
 
 
 env = KMarkovEnvironment(FullyObservablePOMDP(mdp), k=4)

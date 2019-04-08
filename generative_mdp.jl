@@ -24,7 +24,7 @@ A simulation environment for a highway merging scenario
     n_cars_main::Int64 = 1
     n_cars_merge::Int64 = 1
     n_agents::Int64 = n_cars_main + n_cars_merge
-    n_max_agent_main::Int64 = max(15, n_agents + 1)
+    n_max_agent_main::Int64 = max(16, n_agents + 1)
     car_def::VehicleDef = VehicleDef()
     dt::Float64 = 0.5 # time step
     jerk_levels::SVector{5, Float64} = SVector(-1, -0.5, 0, 0.5, 1.0)
@@ -37,6 +37,9 @@ A simulation environment for a highway merging scenario
     default_driver_model::DriverModel{LaneFollowingAccel} = IntelligentDriverModel(v_des=env.main_lane_vmax)
     observe_cooperation::Bool = false
     # initial state params
+    traffic_speed::Symbol = :mixed
+    random_n_cars::Bool = false
+    driver_type::Symbol = :random
     max_burn_in::Int64 = 20
     min_burn_in::Int64 = 10
     initial_ego_velocity::Float64 = 10.0
@@ -62,6 +65,10 @@ POMDPs.actionindex(mdp::GenerativeMergingMDP, a::Int64) = a
 
 function POMDPs.initialstate(mdp::GenerativeMergingMDP, rng::AbstractRNG)
     s0 = Scene()
+    if mdp.random_n_cars
+        mdp.n_cars_main = rand(rng, mpd.n_cars_main:mdp.n_cars_main+2)
+    end
+    mdp.driver_models = Dict{Int64, DriverModel}(EGO_ID=>EgoDriver(LaneFollowingAccel(0.0)))
     start_positions = sample(rng, mdp.main_lane_slots, mdp.n_cars_main, replace=false)   
     # maximum_gap = div(length(mdp.main_lane_slots), mdp.n_cars_main + 1)
     # start_positions = spread_out_initialization(mdp, rng)
@@ -81,9 +88,19 @@ function POMDPs.initialstate(mdp::GenerativeMergingMDP, rng::AbstractRNG)
             # mdp.driver_models[i] = IntelligentDriverModel()
         mdp.driver_models[i] = CooperativeIDM()
         # end
-        v_des = sample(rng, [5.0, 10., 15.0], Weights([0.2, 0.3, 0.5]))
+        if mdp.traffic_speed == :mixed
+            v_des = sample(rng, [5.0, 10., 15.0], Weights([0.2, 0.3, 0.5]))
+        elseif mdp.traffic_speed == :fast
+            v_des = 15.0
+        end
         set_desired_speed!(mdp.driver_models[i], v_des)
-        mdp.driver_models[i].c = rand(rng, [0,1]) # change cooperativity
+        if mdp.driver_type == :random
+            mdp.driver_models[i].c = rand(rng, [0,1]) # change cooperativity
+        elseif mdp.driver_type == :aggressive
+            mdp.driver_models[i].c = 0.0
+        elseif mdp.driver_type == :cooperative
+            mdp.driver_models[i].c = 1.0
+        end
         # mdp.driver_models[i].c = 0  # change cooperativity
         # mdp.driver_models[i].c = 1 # change cooperativity        
     end
@@ -105,6 +122,7 @@ function POMDPs.initialstate(mdp::GenerativeMergingMDP, rng::AbstractRNG)
     for veh in scene
         push!(s, veh)
     end
+    # @show keys(mdp.driver_models)
     return AugScene(s, (acc=ego_acc_0,))
 end    
 
@@ -130,7 +148,7 @@ function POMDPs.generate_s(mdp::GenerativeMergingMDP, s::AugScene, a::Int64, rng
     scene = deepcopy(s.scene)
     mdp.driver_models[EGO_ID].a = action_map(mdp, s.ego_info.acc, a)
     ego_acc = mdp.driver_models[EGO_ID].a.a
-    acts = Vector{LaneFollowingAccel}(undef, mdp.n_agents)
+    acts = Vector{LaneFollowingAccel}(undef, mdp.n_cars_main + 1)
 
     # call driver models 
     for i=EGO_ID+1:EGO_ID+mdp.n_cars_main
@@ -150,24 +168,27 @@ function POMDPs.generate_s(mdp::GenerativeMergingMDP, s::AugScene, a::Int64, rng
     return AugScene(scene, (acc=ego_acc,))
 end
 
-function extract_features(mdp::GenerativeMergingMDP, s::AugScene)
-    scene = s.scene
-    a_ego = s.ego_info.acc
-    scene_features = extract_features(mdp.env, scene)
-    push!(scene_features, a_ego)
-    for i=EGO_ID+1:EGO_ID+mdp.n_cars_main
-        obs_c = 0.5
-        if mdp.observe_cooperation
-            obs_c = mdp.driver_models[i].c
-        end
-        push!(scene_features, obs_c)
-    end
-    scene_features[end-4:end]
-    return scene_features
-end
+# function extract_features(mdp::GenerativeMergingMDP, s::AugScene)
+#     scene = s.scene
+#     a_ego = s.ego_info.acc
+#     scene_features = extract_features(mdp.env, scene)
+#     push!(scene_features, a_ego)
+#     for i=EGO_ID+1:EGO_ID+mdp.n_cars_main
+#         obs_c = 0.5
+#         if mdp.observe_cooperation
+#             obs_c = mdp.driver_models[i].c
+#         end
+#         push!(scene_features, obs_c)
+#     end
+#     scene_features[end-4:end]
+#     return scene_features
+# end
 
-function extract_features(env::MergingEnvironment, scene::Scene)
-    features = zeros(10)
+function extract_features(mdp::GenerativeMergingMDP, s::AugScene)
+    # @show keys(mdp.driver_models)
+    scene = s.scene
+    env = mdp.env
+    features = -3*ones(15)
     ego_ind = findfirst(EGO_ID, scene)
     ego = scene[ego_ind]
 
@@ -177,68 +198,109 @@ function extract_features(env::MergingEnvironment, scene::Scene)
     v_ego = ego.state.v
     features[1] = s_ego
     features[2] = v_ego
+    features[3] = s.ego_info.acc
     # get neighbors 
     fore, merge, fore_main, rear_main = get_neighbors(env, scene, EGO_ID)
 
     # front neighbor
+    features[6] = 0.0
     if fore.ind != nothing
+        fore_id = scene[fore.ind].id
         v_oth = scene[fore.ind].state.v
         headway = fore.Δs
-        features[3] = headway
-        features[4] = v_oth
+        features[4] = headway
+        features[5] = v_oth
+        if mdp.observe_cooperation
+            features[6] = mdp.driver_models[fore_id].c
+        else
+            features[6] = 0.
+        end
     end
 
 
     # two closest cars in main lane
+    features[9] = 0.0
     if fore_main.ind != nothing 
+        fore_main_id = scene[fore_main.ind].id
         v_oth_main_fore = scene[fore_main.ind].state.v
         headway_main_fore = fore_main.Δs
-        features[5] = headway_main_fore
-        features[6] = v_oth_main_fore
+        features[7] = headway_main_fore
+        features[8] = v_oth_main_fore
+        if mdp.observe_cooperation
+            features[9] = mdp.driver_models[fore_main_id].c
+        else
+            features[9] = 0.
+        end
     end
+    features[12] = 0.0
     if rear_main.ind != nothing 
+        rear_main_id = scene[rear_main.ind].id
         v_oth_main_rear = scene[rear_main.ind].state.v
         headway_main_rear = rear_main.Δs
-        features[7] = headway_main_rear
-        features[8] = v_oth_main_rear
+        features[10] = headway_main_rear
+        features[11] = v_oth_main_rear
+        if mdp.observe_cooperation
+            features[12] = mdp.driver_models[rear_main_id].c
+        else
+            features[12] = 0.
+        end
     end
 
     # rear car to the merge point 
+    features[15] = 0.0
     if merge.ind != nothing
+        merge_id = scene[merge.ind].id
         v_oth = scene[merge.ind].state.v
         headway = merge.Δs
-        features[9] = headway
-        features[10] = v_oth
+        features[13] = headway
+        features[14] = v_oth
+        if mdp.observe_cooperation
+            features[15] = mdp.driver_models[merge_id].c
+        else
+            features[15] = 0.
+        end
     end
     return features
 end
 
-function normalize_features!(mdp::GenerativeMergingMDP, feature_vec::Vector{Float64})
-    # @assert length(feature_vec) == 11
-    stopind = mdp.n_cars_main + 1
-    for i=1:length(feature_vec)-stopind
-        if isodd(i)
-            feature_vec[i] /= mdp.env.main_lane_length
-        else
-            feature_vec[i] /= mdp.env.main_lane_vmax
-        end
-    end
-    feature_vec[11] /= mdp.max_deceleration
-    return feature_vec
+function normalize_features!(mdp::GenerativeMergingMDP, features::Vector{Float64})
+    features[1] /=  mdp.env.main_lane_length
+    features[2] /=  mdp.env.main_lane_vmax
+    features[3] /=   mdp.max_deceleration
+    features[4] /= mdp.env.main_lane_length
+    features[5] /=  mdp.env.main_lane_vmax
+    features[6] /= 1.
+    features[7] /= mdp.env.main_lane_length
+    features[8] /=   mdp.env.main_lane_vmax
+    features[9] /= 1.
+    features[10] /= mdp.env.main_lane_length
+    features[11] /=  mdp.env.main_lane_vmax
+    features[12] /= 1.
+    features[13] /= mdp.env.main_lane_length
+    features[14] /=  mdp.env.main_lane_vmax
+    features[15] /= 1.
+
+    return features
 end
 
-function unnormalize_features!(mdp::GenerativeMergingMDP, feature_vec::Vector{Float64})
-    # @assert length(feature_vec) == 11
-    stopind = mdp.n_cars_main + 1
-    for i=1:length(feature_vec)-stopind
-        if isodd(i)
-            feature_vec[i] *= mdp.env.main_lane_length
-        else
-            feature_vec[i] *= mdp.env.main_lane_vmax
-        end
-    end
-    feature_vec[11] *= mdp.max_deceleration
-    return feature_vec
+function unnormalize_features!(mdp::GenerativeMergingMDP, features::Vector{Float64})
+    features[1]  *=  mdp.env.main_lane_length
+    features[2]  *=  mdp.env.main_lane_vmax
+    features[3]  *=   mdp.max_deceleration
+    features[4]  *= mdp.env.main_lane_length
+    features[5]  *=  mdp.env.main_lane_vmax
+    features[6]  *= 1.
+    features[7]  *= mdp.env.main_lane_length
+    features[8]  *=   mdp.env.main_lane_vmax
+    features[9]  *= 1.
+    features[10] *= mdp.env.main_lane_length
+    features[11] *=  mdp.env.main_lane_vmax
+    features[12] *= 1.
+    features[13] *= mdp.env.main_lane_length
+    features[14] *=  mdp.env.main_lane_vmax
+    features[15] *= 1.
+
+    return features
 end
 
 

@@ -66,9 +66,23 @@ s = ArgParseSettings()
     "--cooperation"
         help = "whether the ego vehicle observe the cooperation level or not"
         action = :store_true
+    "--random_n_cars"
+        help = "whether the initial number of cars is random"
+        action = :store_true
+    "--driver_type"
+        help = "the distribution of driver types, choose among cooperative, aggressive or random"
+        arg_type = String
+        default = "random"
+    "--traffic_speed"
+        arg_type = String
+        default = "mixed"
     "--recurrent"
         help = "whether to use an RNN in DQN"
         action = :store_true
+    "--load"
+        help = "load a pretrain policy"
+        arg_type = Union{Nothing, String}
+        default = nothing
 end
 parsed_args = parse_args(s)
 
@@ -77,7 +91,10 @@ Random.seed!(seed)
 rng = MersenneTwister(seed)
 
 
-mdp = GenerativeMergingMDP(n_cars_main=parsed_args["n_cars"], 
+mdp = GenerativeMergingMDP(random_n_cars = parsed_args["random_n_cars"],
+                           driver_type = Symbol(parsed_args["driver_type"])
+                           traffic_speed = Symbol(parsed_args["traffic_speed"])
+                           n_cars_main=parsed_args["n_cars"], 
                            observe_cooperation=parsed_args["cooperation"])
 
 s0 = initialstate(mdp, rng)
@@ -91,6 +108,12 @@ if parsed_args["recurrent"]
 else
     model = Chain(Dense(input_dims, 64, relu), Dense(64, 32, relu), Dense(32, n_actions(mdp)))
 end
+
+if parsed_args["load"] != nothing
+    BSON.@load parsed_args["load"] policy
+    Flux.loadparams!(model, params(policy.qnetwork))
+end
+
 solver = DeepQLearningSolver(qnetwork = model, 
                       max_steps = parsed_args["training_steps"],
                       eps_fraction = parsed_args["eps_fraction"],

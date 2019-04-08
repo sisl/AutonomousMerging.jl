@@ -7,13 +7,14 @@ using AutomotiveSensors
 using POMDPs
 using POMDPSimulators
 using POMDPPolicies
+using StatsBase
 using StaticArrays
 using ProgressMeter
 using Parameters
 using Printf
 using JLD2
 using Flux
-using Flux: mse, batchseq, throttle, @epochs, crossentropy
+using Flux: mse, batchseq, throttle, @epochs
 using Base.Iterators: partition
 includet("environment.jl")
 includet("cooperative_IDM.jl")
@@ -29,16 +30,21 @@ function generate_trajectory(mdp::GenerativeMergingMDP, policy::Policy, max_step
     hr = HistoryRecorder(max_steps=max_steps, rng=rng)
     hist = simulate(hr, mdp, policy, s0)
     # extract data from the history 
-    X = Vector{SVector{length(svec), Float64}}(undef, max_steps+1)
+    X = Vector{MVector{length(svec), Float64}}(undef, max_steps+1)
     for i=1:max_steps+1
         X[i] = zeros(length(svec))
     end
     fill!(X, zeros(length(svec)))
     X[1:n_steps(hist)+1] = convert_s.(Ref(Vector{Float64}), hist.state_hist, Ref(mdp))
-    # build labels 
-    labels_dims = mdp.n_cars_main
-    driver_types = Float64[mdp.driver_models[i].c for i=2:mdp.n_cars_main+1]
-    Y = [driver_types for i=1:(max_steps+1)]
+    # build labels
+    Y = Vector{Vector{Float64}}(undef, max_steps + 1) 
+    for (i,x) in enumerate(X)
+        Y[i] = [x[6], x[9], x[12], x[15]]
+        x[6] = 0.5
+        x[9] = 0.5
+        x[12] = 0.5
+        x[15] = 0.5
+    end
     return X, Y
 end
 
@@ -54,7 +60,7 @@ end
 rng = MersenneTwister(1)
 
 
-mdp = GenerativeMergingMDP(n_cars_main = 1, observe_cooperation = false)
+mdp = GenerativeMergingMDP(random_n_cars = true, driver_type = :random, observe_cooperation = true)
 
 # @load "mixed_policy.jld2" policy
 
@@ -68,15 +74,14 @@ X_train, Y_train = collect_set(mdp, policy, max_steps, rng, n_train);
 X_val, Y_val = collect_set(mdp, policy, max_steps, rng, n_val);
 
 
-s0 = initialstate(mdp, rng)
-svec = convert_s(Vector{Float64}, s0, mdp)
-input_dims = length(svec)
-output_dims = mdp.n_cars_main
+input_dims = length(X_train[1][1])
+output_dims = length(Y_train[1][1])
 model = Chain(LSTM(input_dims, 64), Dense(64, 32, relu), Dense(32, output_dims, σ))
 model = Chain(Dense(input_dims, output_dims, σ)) # logistic regression
 
 function loss(xs, ys)
-    l = sum(crossentropy.(model.(xs), ys))
+    # l = sum(Flux.crossentropy.(model.(xs), ys))
+    l = mean(Flux.mse.(model.(xs), ys))
     Flux.truncate!(model)
     Flux.reset!(model)
     return l
@@ -104,7 +109,7 @@ yt = batchseq(Y_train)
 
 evalcb = () -> @printf("eval loss %2.2f | train loss %2.2f | eval acc %2.2f | train acc %2.2f \n ", loss(xv, yv), loss(xt, yt), sequence_accuracy(xv, yv), sequence_accuracy(xt, yt))
 
-opt = Descent(1e-2)
+opt = ADAM(1e-2)
 @epochs 1000 Flux.train!(loss, params(model), [(xt, yt)], opt, cb=evalcb)
 
 loss(xt, yt)

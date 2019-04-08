@@ -36,7 +36,7 @@ end
 
 rng = MersenneTwister(1)
 
-mdp = GenerativeMergingMDP(n_cars_main=1)
+mdp = GenerativeMergingMDP(n_cars_main=1, dt=0.1)
 
 mdp.driver_models[2] = CooperativeIDM(c=0.0)
 set_desired_speed!(mdp.driver_models[2], 5.0)
@@ -49,7 +49,7 @@ policy = FunctionPolicy(s->7)
 for (k,m) in mdp.driver_models
     reset_hidden_state!(m)
 end
-hr = HistoryRecorder(rng = rng, max_steps=10)
+hr = HistoryRecorder(rng = rng, max_steps=40)
 hist = simulate(hr, mdp, policy, s0)
 
 include("visualizer.jl");

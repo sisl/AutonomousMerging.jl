@@ -14,6 +14,7 @@ using Flux
 using RLInterface
 using POMDPModelTools
 using TensorBoardLogger
+using ProgressMeter
 # using Interact
 # using Blink
 using MCTS
@@ -25,10 +26,11 @@ includet("generative_mdp.jl")
 includet("masking.jl")
 includet("cooperative_IDM.jl")
 includet("overlays.jl")
+includet("make_gif.jl")
 
 rng = MersenneTwister(1)
 
-mdp = GenerativeMergingMDP(n_cars_main=6, observe_cooperation=true)
+mdp = GenerativeMergingMDP(random_n_cars=true, n_cars_main = 8, traffic_speed = :mixed, driver_type=:mixed, observe_cooperation=true)
 
 s0 = initialstate(mdp, rng)
 
@@ -39,7 +41,7 @@ input_dims = length(svec)
 
 model = Chain(Dense(input_dims, 64, relu), Dense(64, 32, relu), Dense(32, n_actions(mdp)))
 solver = DeepQLearningSolver(qnetwork = model, 
-                      max_steps = 1_000_000,
+                      max_steps = 2_000_000,
                       eps_fraction = 0.5,
                       eps_end = 0.01,
                       eval_freq = 10_000,
@@ -47,7 +49,7 @@ solver = DeepQLearningSolver(qnetwork = model,
                       target_update_freq = 5000,
                       batch_size = 32, 
                       learning_rate = 1e-4,
-                      train_start = 1000,
+                      train_start = 10000,
                       log_freq = 1000,
                       num_ep_eval = 1000,
                       double_q = true,
@@ -62,8 +64,12 @@ solver = DeepQLearningSolver(qnetwork = model,
 policy = solve(solver, mdp)
 
 using BSON
+BSON.@save "policy_true.bson" policy
+
 
 BSON.@load joinpath(solver.logdir,"policy_true.bson") policy
+BSON.@load "policy_true.bson" policy
+policy = NNPolicy(mdp, policy.qnetwork, policy.action_map, policy.n_input_dims)
 
 env = MDPEnvironment(mdp)
 DeepQLearning.evaluation(solver.evaluation_policy, 
@@ -73,15 +79,45 @@ DeepQLearning.evaluation(solver.evaluation_policy,
                 solver.verbose)
 
 # policy = MaskedPolicy(policy)
-s0 = initialstate(mdp, rng)
-hr = HistoryRecorder(rng = rng, max_steps=100)
-hist = simulate(hr, mdp, policy, s0)
+s0 = initialstate(mdp, rng);
+hr = HistoryRecorder(rng = rng, max_steps=100);
+hist = simulate(hr, mdp, policy, s0);
 
 include("visualizer.jl");
 
+make_gif(hist, mdp)
+
 ## run many simulations
-simlist = [Sim(mdp, policy,
-rng=MersenneTwister(i), max_steps=200) for i=1:1000];
+
+function quick_evaluation(mdp::GenerativeMergingMDP, policy::Policy, rng::AbstractRNG, n_eval=1000)
+    avg_r, avg_dr, c_rate, avg_steps, t_out = 0.0, 0.0, 0.0, 0.0, 0.0
+    @showprogress for i=1:n_eval
+        s0 = initialstate(mdp, rng)
+        hr = HistoryRecorder(rng = rng, max_steps=100)
+        hist = simulate(hr, mdp, policy, s0)
+        avg_r += undiscounted_reward(hist)
+        avg_dr += discounted_reward(hist)
+        c_rate += undiscounted_reward(hist) <= mdp.collision_cost
+        t_out += n_steps(hist) >= hr.max_steps ? 1.0 : 0.0
+        avg_steps += n_steps(hist)
+    end
+    avg_r /= n_eval 
+    avg_dr /= n_eval 
+    c_rate /= n_eval
+    avg_steps /= n_eval
+    t_out /= n_eval
+    return avg_r, avg_dr, c_rate, avg_steps, t_out
+end
+
+avg_r, avg_dr, c_rate, avg_steps, t_out = quick_evaluation(mdp, policy, rng, 10000)
+
+println("Collisions ", c_rate*100)
+println("Avg steps ", avg_steps)
+println("Time outs ", t_out*100)
+println("avg disc reward ", avg_dr)
+println("avg reward ", avg_r)
+
+simlist = [Sim(mdp, policy, max_steps=200, rng=MersenneTwister(i)) for i=1:1000];
 
 res = run_parallel(simlist) do sim, hist
     return [:steps=>n_steps(hist), :dreward=>discounted_reward(hist), :reward=>undiscounted_reward(hist)]
@@ -97,6 +133,8 @@ rng = MersenneTwister(collision_ind)
 s0 = initialstate(mdp, rng)
 hr = HistoryRecorder(rng = rng, max_steps=100)
 hist = simulate(hr, mdp, policy, s0)
+n_steps(hist)
+undiscounted_reward(hist)
 
 include("visualizer.jl");
 
@@ -119,3 +157,30 @@ for step in 1:n_steps(hist)
 end
 
 write("out.gif", frames)
+
+
+## Env version 
+
+obs = reset!(env)
+act = action(policy, op)
+vals = actionvalues(policy, op)
+op, rew, done, info = step!(env, act)
+
+s = env.state
+
+action(policy, s)
+actionvalues(policy, s)
+
+using ProgressMeter
+avg_r = 0.0
+@showprogress for i=1:1000
+    global avg_r
+    s0 = initialstate(mdp, rng)
+    hr = HistoryRecorder(rng = rng, max_steps=100)
+    hist = simulate(hr, mdp, policy, s0)
+    avg_r += undiscounted_reward(hist)
+end
+
+
+
+avg_r/1000
