@@ -92,8 +92,8 @@ rng = MersenneTwister(seed)
 
 
 mdp = GenerativeMergingMDP(random_n_cars = parsed_args["random_n_cars"],
-                           driver_type = Symbol(parsed_args["driver_type"])
-                           traffic_speed = Symbol(parsed_args["traffic_speed"])
+                           driver_type = Symbol(parsed_args["driver_type"]),
+                           traffic_speed = Symbol(parsed_args["traffic_speed"]),
                            n_cars_main=parsed_args["n_cars"], 
                            observe_cooperation=parsed_args["cooperation"])
 
