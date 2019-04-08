@@ -26,7 +26,7 @@ includet("overlays.jl")
 
 rng = MersenneTwister(1)
 
-mdp = GenerativeMergingMDP(n_cars_main=8, driver_type = :random, observe_cooperation = true, initial_ego_velocity=0.0)
+mdp = GenerativeMergingMDP(max_cars=12, min_cars=10, driver_type = :random, observe_cooperation = true, initial_ego_velocity=0.0)
 
 policy = RandomPolicy(mdp, rng=rng)
 

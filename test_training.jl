@@ -30,7 +30,8 @@ includet("make_gif.jl")
 
 rng = MersenneTwister(1)
 
-mdp = GenerativeMergingMDP(random_n_cars=true, n_cars_main = 8, traffic_speed = :mixed, driver_type=:mixed, observe_cooperation=true)
+mdp = GenerativeMergingMDP(random_n_cars=true,max_cars=12, min_cars=10, traffic_speed = :mixed, driver_type=:aggressive, 
+                           observe_cooperation=true)
 
 s0 = initialstate(mdp, rng)
 

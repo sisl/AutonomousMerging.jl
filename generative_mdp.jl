@@ -24,7 +24,8 @@ A simulation environment for a highway merging scenario
     n_cars_main::Int64 = 1
     n_cars_merge::Int64 = 1
     n_agents::Int64 = n_cars_main + n_cars_merge
-    n_max_agent_main::Int64 = max(16, n_agents + 1)
+    max_cars::Int64 = 16
+    min_cars::Int64 = 0
     car_def::VehicleDef = VehicleDef()
     dt::Float64 = 0.5 # time step
     jerk_levels::SVector{5, Float64} = SVector(-1, -0.5, 0, 0.5, 1.0)
@@ -48,7 +49,7 @@ A simulation environment for a highway merging scenario
     initial_velocity_std::Float64 = 1.0
     main_lane_slots::LinRange{Float64} = LinRange(0.0, 
                                             env.main_lane_length + env.after_merge_length,
-                                            n_max_agent_main)
+                                            max_cars)
     # reward params 
     collision_cost::Float64 = -1.0
     goal_reward::Float64 = 1.0
@@ -67,7 +68,7 @@ POMDPs.actionindex(mdp::GenerativeMergingMDP, a::Int64) = a
 function POMDPs.initialstate(mdp::GenerativeMergingMDP, rng::AbstractRNG)
     s0 = Scene()
     if mdp.random_n_cars
-        mdp.n_cars_main = rand(rng, mdp.n_max_agent_main-2:mdp.n_max_agent_main)
+        mdp.n_cars_main = rand(rng, mdp.min_cars:mdp.max_cars)
     end
     mdp.driver_models = Dict{Int64, DriverModel}(EGO_ID=>EgoDriver(LaneFollowingAccel(0.0)))
     start_positions = sample(rng, mdp.main_lane_slots, mdp.n_cars_main, replace=false)   
