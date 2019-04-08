@@ -1,1 +1,0 @@
-julia training_script.jl --training_steps=2000000 --logdir=log1 --n_cars=12 --cooperation --driver_type=random --random_n_cars --load=policy_true.bson
