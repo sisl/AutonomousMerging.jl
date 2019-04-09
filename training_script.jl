@@ -85,6 +85,10 @@ s = ArgParseSettings()
         help = "load a pretrain policy"
         arg_type = Union{Nothing, String}
         default = nothing
+    "--collision_cost"
+        help = "collision cost in the mdp formulation"
+        arg_type = Float64
+        defautl = -1.0
 end
 parsed_args = parse_args(s)
 
@@ -94,6 +98,7 @@ rng = MersenneTwister(seed)
 
 
 mdp = GenerativeMergingMDP(random_n_cars = true,
+                            collision_cost = parsed_args["collision_cost"],
                             max_cars = parsed_args["max_cars"],
                             min_cars = parsed_args["min_cars"],
                            driver_type = Symbol(parsed_args["driver_type"]),
