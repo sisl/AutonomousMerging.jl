@@ -30,7 +30,7 @@ includet("make_gif.jl")
 
 rng = MersenneTwister(1)
 
-mdp = GenerativeMergingMDP(random_n_cars=true,max_cars=12, min_cars=10, traffic_speed = :mixed, driver_type=:aggressive, 
+mdp = GenerativeMergingMDP(random_n_cars=true,max_cars=12, min_cars=8, traffic_speed = :mixed, driver_type=:random, 
                            observe_cooperation=true)
 
 s0 = initialstate(mdp, rng)
@@ -42,7 +42,7 @@ input_dims = length(svec)
 
 model = Chain(Dense(input_dims, 64, relu), Dense(64, 32, relu), Dense(32, n_actions(mdp)))
 solver = DeepQLearningSolver(qnetwork = model, 
-                      max_steps = 2_000_000,
+                      max_steps = 1_000_000,
                       eps_fraction = 0.5,
                       eps_end = 0.01,
                       eval_freq = 10_000,
@@ -69,7 +69,7 @@ BSON.@save "policy_true.bson" policy
 
 
 BSON.@load joinpath(solver.logdir,"policy_true.bson") policy
-BSON.@load "policy_true.bson" policy
+BSON.@load "log9/policy_true.bson" policy
 policy = NNPolicy(mdp, policy.qnetwork, policy.action_map, policy.n_input_dims)
 
 env = MDPEnvironment(mdp)

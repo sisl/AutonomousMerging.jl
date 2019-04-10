@@ -8,6 +8,7 @@ using AutoViz
 using AutomotiveDrivingModels
 using AutomotivePOMDPs
 using POMDPSimulators
+using BeliefUpdaters
 using POMDPPolicies
 using DeepQLearning 
 using Flux 
@@ -22,6 +23,8 @@ includet("environment.jl")
 includet("generative_mdp.jl")
 includet("masking.jl")
 includet("cooperative_IDM.jl")
+includet("belief_updater.jl")
+includet("rendering.jl")
 includet("overlays.jl")
 includet("make_gif.jl")
 
@@ -36,9 +39,9 @@ end
 
 rng = MersenneTwister(1)
 
-mdp = GenerativeMergingMDP(n_cars_main=1, dt=0.1)
+mdp = GenerativeMergingMDP(random_n_cars=true, dt=0.5)
 
-mdp.driver_models[2] = CooperativeIDM(c=0.0)
+mdp.driver_models[2] = CooperativeIDM(c=1.0)
 set_desired_speed!(mdp.driver_models[2], 5.0)
 
 

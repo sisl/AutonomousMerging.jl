@@ -13,6 +13,7 @@ using DeepQLearning
 using Flux 
 using RLInterface
 using POMDPModelTools
+using BeliefUpdaters
 using TensorBoardLogger
 using ArgParse
 using BSON
@@ -23,6 +24,7 @@ includet("environment.jl")
 includet("generative_mdp.jl")
 includet("masking.jl")
 includet("cooperative_IDM.jl")
+includet("belief_updater.jl")
 includet("overlays.jl")
 
 BLAS.set_num_threads(8)
@@ -88,7 +90,7 @@ s = ArgParseSettings()
     "--collision_cost"
         help = "collision cost in the mdp formulation"
         arg_type = Float64
-        defautl = -1.0
+        default = -1.0
 end
 parsed_args = parse_args(s)
 

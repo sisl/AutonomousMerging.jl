@@ -70,50 +70,66 @@ function AutomotiveDrivingModels.observe!(model::CooperativeIDM, scene::Scene, r
         if ( ego_ttm < 0.0 || ego_ttm < veh_ttm || veh_ttm == Inf)
             # println("Ego TTM < Merge TTM, ignoring")
             ego_ttm < veh_ttm
-            model.consider_merge = false
             model.a = model.a_idm
+            model.consider_merge = false
             model.front_car = false
         else
-            model.consider_merge = true
-            # println("Ego TTM >= Merge TTM, predicting")
-            vehp = constant_acceleration_prediction(model.env, veh, model.other_acc, veh_ttm, model.env.main_lane_vmax)
-            egop = constant_acceleration_prediction(model.env, ego, model.a, veh_ttm, model.idm.v_des)
-            # vehp.state
-            # egop.state
-            dist_at_merge = distance_projection(model.env, vehp) - distance_projection(model.env, egop)
-            model.dist_at_merge = dist_at_merge
-            # t_coll = collision_time(model.env, egop, vehp, model.a_merge, model.a_min)
-            # d_brake = t_coll == nothing ? 0 : braking_distance(egop.state.v, t_coll, model.a_min)
-            v_oth = vehp.state.v
-            v_ego = egop.state.v 
-            Δv = v_oth - v_ego
-            headway = dist_at_merge
-            s_des = model.idm.s_min + v_ego*model.idm.T - v_ego*Δv / (2*sqrt(model.idm.a_max*model.idm.d_cmf))
-            # @show t_coll
-            # @show d_brake
-            # @show dist_at_merge
-            # @show s_des
-            model.s_des = s_des
-            if dist_at_merge > model.c*s_des
-                # println("predicted distance at merge > s_des, ignoring")
-                model.a = model.a_idm
-                model.front_car = false
-            # elseif dist_at_merge <= d_brake
-            # elseif dist_at_merge <= s_des + (1 - model.c)*(d_brake - s_des)
-            elseif dist_at_merge <= model.c*s_des
-                # if d_brake <= dist_at_merge
-                    # println("critical distance predicted")
-                # end
-                # consider veh as front car and apply IDM 
+            model.consider_merge = true 
+            if veh_ttm < model.c*ego_ttm 
                 model.front_car = true
-                # println("consider merge car as front car")
                 headway = distance_projection(model.env, veh) - distance_projection(model.env, ego) 
                 v_oth = veh.state.v
                 v_ego = ego.state.v
+                # @show "tracking front car"
                 track_longitudinal!(model.idm, v_ego, v_oth, headway)
                 model.a_merge = model.idm.a
                 model.a = min(model.a_merge, model.a_idm)
+            else 
+                model.a = model.a_idm 
+                model.front_car = false
             end
+        # else
+        #     model.consider_merge = true
+        #     # println("Ego TTM >= Merge TTM, predicting")
+        #     vehp = constant_acceleration_prediction(model.env, veh, model.other_acc, veh_ttm, model.env.main_lane_vmax)
+        #     egop = constant_acceleration_prediction(model.env, ego, model.a, veh_ttm, model.idm.v_des)
+        #     # vehp.state
+        #     # egop.state
+        #     dist_at_merge = distance_projection(model.env, vehp) - distance_projection(model.env, egop)
+        #     model.dist_at_merge = dist_at_merge
+        #     # t_coll = collision_time(model.env, egop, vehp, model.a_merge, model.a_min)
+        #     # d_brake = t_coll == nothing ? 0 : braking_distance(egop.state.v, t_coll, model.a_min)
+        #     v_oth = vehp.state.v
+        #     v_ego = egop.state.v 
+        #     Δv = v_oth - v_ego
+        #     headway = dist_at_merge
+        #     s_des = model.idm.s_min + v_ego*model.idm.T - v_ego*Δv / (2*sqrt(model.idm.a_max*model.idm.d_cmf))
+        #     # @show t_coll
+        #     # @show d_brake
+        #     # @show dist_at_merge
+        #     # @show s_des
+        #     model.s_des = s_des
+        #     if dist_at_merge > model.c*s_des
+        #         # println("predicted distance at merge > s_des, ignoring")
+        #         model.a = model.a_idm
+        #         model.front_car = false
+        #     # elseif dist_at_merge <= d_brake
+        #     # elseif dist_at_merge <= s_des + (1 - model.c)*(d_brake - s_des)
+        #     elseif dist_at_merge <= model.c*s_des
+        #         # if d_brake <= dist_at_merge
+        #             # println("critical distance predicted")
+        #         # end
+        #         # consider veh as front car and apply IDM 
+        #         model.front_car = true
+        #         # println("consider merge car as front car")
+        #         headway = distance_projection(model.env, veh) - distance_projection(model.env, ego) 
+        #         v_oth = veh.state.v
+        #         v_ego = ego.state.v
+        #         # @show "tracking front car"
+        #         track_longitudinal!(model.idm, v_ego, v_oth, headway)
+        #         model.a_merge = model.idm.a
+        #         model.a = min(model.a_merge, model.a_idm)
+        #     end
         end
     end
     return model

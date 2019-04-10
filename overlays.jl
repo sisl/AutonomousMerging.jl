@@ -134,7 +134,7 @@ function AutoViz.render!(rendermodel::RenderModel, overlay::CooperativeIDMOverla
     veh_ttm = overlay.model.veh_ttm
     # @show !(ego_ttm < 0.0 || ego_ttm = Inf || ego_ttm <= veh_ttm || veh_ttm == Inf)
     # drawtext(@sprintf("considering merge: %s", !(ego_ttm < 0.0 || ego_ttm == Inf || ego_ttm < veh_ttm || veh_ttm == Inf || mergeveh.state.posF.s < overlay.model.fov)), yₒ + 7*Δy, rendermodel, textparams)
-    drawtext(@sprintf("considering merge: %s", model.consider_merge), yₒ + 7*Δy, rendermodel, textparams)
+    drawtext(@sprintf("considering merge: %s", overlay.model.consider_merge), yₒ + 7*Δy, rendermodel, textparams)
     drawtext(@sprintf("driver ttm: %2.1f", overlay.model.ego_ttm), yₒ + 8*Δy, rendermodel, textparams)
     drawtext(@sprintf("merge ttm: %2.1f", overlay.model.veh_ttm), yₒ + 9*Δy, rendermodel, textparams)
     drawtext(@sprintf("front car %s", overlay.model.front_car), yₒ + 10*Δy, rendermodel, textparams)
@@ -160,5 +160,32 @@ function get_car_type_colors(scene::Scene, models::Dict{Int64, DriverModel};
         end
     end   
     return color_dict
+end
+
+struct BeliefOverlay <: SceneOverlay
+    b::MergingBelief
+end
+
+function AutoViz.render!(rendermodel::RenderModel, overlay::BeliefOverlay,
+                        scene::Scene, roadway::Roadway)
+    for (vehid,prob) in overlay.b.driver_types 
+        vehind = findfirst(vehid, scene)
+        if vehind != nothing 
+            render_proba!(rendermodel, scene, roadway, vehind, prob)
+        end
+    end
+end
+     
+
+function render_proba!(rendermodel::RenderModel, scene::Scene, roadway::Roadway, vehind::Int64, proba::Float64)
+    veh = scene[vehind]
+    A = get_front(veh)
+    disp_point = A + VecSE2(-5.0, 4.0, 0.0)
+    text_overlay = TextOverlay(text=[@sprintf("%1.2f", proba)], 
+                                pos=disp_point,
+                                line_spacing = 0.15,
+                                font_size = 17,
+                                incameraframe=true)
+    render!(rendermodel, text_overlay, scene, roadway)
 end
 

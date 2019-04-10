@@ -107,7 +107,7 @@ function POMDPs.initialstate(mdp::GenerativeMergingMDP, rng::AbstractRNG)
         # mdp.driver_models[i].c = 1 # change cooperativity        
     end
     # burn in 
-    acts = Vector{LaneFollowingAccel}(undef, mdp.n_cars_main)
+    acts = Vector{LaneFollowingAccel}(undef, length(scene))
     burn_in =rand(rng, mdp.min_burn_in:mdp.max_burn_in)
     # burn_in = 0
     scene = s0
@@ -142,6 +142,10 @@ function POMDPs.reward(mdp::GenerativeMergingMDP, s::AugScene, a::Int64, sp::Aug
     return r
 end
 
+function POMDPs.reward(mdp::GenerativeMergingMDP, s::AugScene, a::Int64)
+    return reward(mdp, s, a, s)
+end
+
 function POMDPs.isterminal(mdp::GenerativeMergingMDP, s::AugScene)
     return is_crash(s.scene) || reachgoal(mdp, get_by_id(s.scene, EGO_ID))
 end
@@ -150,7 +154,7 @@ function POMDPs.generate_s(mdp::GenerativeMergingMDP, s::AugScene, a::Int64, rng
     scene = deepcopy(s.scene)
     mdp.driver_models[EGO_ID].a = action_map(mdp, s.ego_info.acc, a)
     ego_acc = mdp.driver_models[EGO_ID].a.a
-    acts = Vector{LaneFollowingAccel}(undef, mdp.n_cars_main + 1)
+    acts = Vector{LaneFollowingAccel}(undef, length(scene))
 
     # call driver models 
     for i=EGO_ID+1:EGO_ID+mdp.n_cars_main
