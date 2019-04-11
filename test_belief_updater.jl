@@ -51,7 +51,7 @@ end
 
 rng = MersenneTwister(1)
 
-mdp = GenerativeMergingMDP(random_n_cars=true, min_cars=10, max_cars=14)
+mdp = GenerativeMergingMDP(random_n_cars=true, min_cars=10, max_cars=14, observe_cooperation=true)
 
 mdp.driver_models[2] = CooperativeIDM(c=0.0)
 set_desired_speed!(mdp.driver_models[2], 5.0)

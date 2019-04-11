@@ -135,7 +135,7 @@ end
 
 if parsed_args["load"] != nothing
     BSON.@load parsed_args["load"] policy
-    Flux.loadparams!(model, params(policy.qnetwork))
+    Flux.loadparams!(model, Flux.params(policy.qnetwork))
 end
 
 solver = DeepQLearningSolver(qnetwork = model, 
@@ -149,7 +149,7 @@ solver = DeepQLearningSolver(qnetwork = model,
                       learning_rate = parsed_args["learning_rate"],
                       train_start = 1000,
                       log_freq = 1000,
-                      num_ep_eval = 1000,
+                      num_ep_eval = 100,
                       double_q = true,
                       dueling = false,
                       prioritized_replay = true,
@@ -168,7 +168,7 @@ DeepQLearning.evaluation(solver.evaluation_policy,
                 solver.max_episode_length,
                 solver.verbose)
 
-function quick_evaluation(mdp::GenerativeMergingMDP, policy::Policy, rng::AbstractRNG, n_eval=1000)
+function quick_evaluation(mdp, policy::Policy, rng::AbstractRNG, n_eval=1000)
     avg_r, avg_dr, c_rate, avg_steps, t_out = 0.0, 0.0, 0.0, 0.0, 0.0
     @showprogress for i=1:n_eval
         s0 = initialstate(mdp, rng)
@@ -176,7 +176,7 @@ function quick_evaluation(mdp::GenerativeMergingMDP, policy::Policy, rng::Abstra
         hist = simulate(hr, mdp, policy, s0)
         avg_r += undiscounted_reward(hist)
         avg_dr += discounted_reward(hist)
-        c_rate += undiscounted_reward(hist) <= mdp.collision_cost
+        c_rate += undiscounted_reward(hist) <= -1.0
         t_out += n_steps(hist) >= hr.max_steps ? 1.0 : 0.0
         avg_steps += n_steps(hist)
     end
@@ -188,7 +188,7 @@ function quick_evaluation(mdp::GenerativeMergingMDP, policy::Policy, rng::Abstra
     return avg_r, avg_dr, c_rate, avg_steps, t_out
 end
 
-avg_r, avg_dr, c_rate, avg_steps, t_out = quick_evaluation(mdp, policy, rng, 10000)
+avg_r, avg_dr, c_rate, avg_steps, t_out = quick_evaluation(mdp, policy, rng, 1000)
 
 println("Collisions ", c_rate*100)
 println("Avg steps ", avg_steps)

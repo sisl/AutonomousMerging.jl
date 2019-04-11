@@ -117,12 +117,11 @@ function update_proba!(mdp::GenerativeMergingMDP, b::MergingBelief, driver_types
     end
     probs = zeros(2)
     for c in [0, 1]
-        for v_des in [5.0, 10.0, 15.0]
-            mdp.driver_models[id].c = c
-            set_desired_speed!(mdp.driver_models[id], v_des)
-            d = transition(mdp, b.o, a)
-            probs[Int(c + 1)] += pdf(d, sp_vec)*(c*old_prob + (1 - c)*(1 - old_prob))
-        end
+        mdp.driver_models[id].c = c
+        v_des = 5.0
+        set_desired_speed!(mdp.driver_models[id], v_des)
+        d = transition(mdp, b.o, a)
+        probs[Int(c + 1)] += pdf(d, sp_vec)*(c*old_prob + (1 - c)*(1 - old_prob))
     end
     # @printf("probs = %s id=%d \n", probs, id)
     if sum(probs) ≈ 0.0
