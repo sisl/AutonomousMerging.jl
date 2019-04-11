@@ -77,7 +77,8 @@ function AutomotiveDrivingModels.observe!(model::CooperativeIDM, scene::Scene, r
             model.consider_merge = true 
             if veh_ttm < model.c*ego_ttm 
                 model.front_car = true
-                headway = distance_projection(model.env, veh) - distance_projection(model.env, ego) 
+                headway = distance_projection(model.env, veh) - distance_projection(model.env, ego)
+                headway -= veh.def.length 
                 v_oth = veh.state.v
                 v_ego = ego.state.v
                 # @show "tracking front car"

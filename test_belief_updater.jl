@@ -51,7 +51,7 @@ end
 
 rng = MersenneTwister(1)
 
-mdp = GenerativeMergingMDP(random_n_cars=true, min_cars=12, max_cars=12)
+mdp = GenerativeMergingMDP(random_n_cars=true, min_cars=10, max_cars=14)
 
 mdp.driver_models[2] = CooperativeIDM(c=0.0)
 set_desired_speed!(mdp.driver_models[2], 5.0)
@@ -92,9 +92,41 @@ hist= simulate(hr, pomdp, policy, up, b0, s0);
 
 include("visualizer.jl")
 
+
 includet("make_gif.jl")
 
 make_gif(hist, mdp, hist.belief_hist)
+
+function quick_evaluation(pomdp::POMDP, policy::Policy, rng::AbstractRNG, n_eval=1000)
+    avg_r, avg_dr, c_rate, avg_steps, t_out = 0.0, 0.0, 0.0, 0.0, 0.0
+    @showprogress for i=1:n_eval
+        s0 = initialstate(pomdp, rng)
+        up = MergingUpdater(pomdp.mdp)
+        hr = HistoryRecorder(rng = rng, max_steps=100)
+        hist = simulate(hr, pomdp, policy, up, b0, s0)
+        avg_r += undiscounted_reward(hist)
+        avg_dr += discounted_reward(hist)
+        c_rate += undiscounted_reward(hist) <= pomdp.mdp.collision_cost
+        t_out += n_steps(hist) >= hr.max_steps ? 1.0 : 0.0
+        avg_steps += n_steps(hist)
+    end
+    avg_r /= n_eval 
+    avg_dr /= n_eval 
+    c_rate /= n_eval
+    avg_steps /= n_eval
+    t_out /= n_eval
+    return avg_r, avg_dr, c_rate, avg_steps, t_out
+end
+policy = NNPolicy(mdp, policy.qnetwork, policy.action_map, policy.n_input_dims)
+avg_r, avg_dr, c_rate, avg_steps, t_out = quick_evaluation(pomdp, policy, rng, 1000)
+
+println("Collisions ", c_rate*100)
+println("Avg steps ", avg_steps)
+println("Time outs ", t_out*100)
+println("avg disc reward ", avg_dr)
+println("avg reward ", avg_r)
+
+
 
 
 spbackup = deepcopy(sp)

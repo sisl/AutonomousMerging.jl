@@ -3,11 +3,14 @@ using Random
 using Printf
 using StatsBase
 using StaticArrays
+using Distributions
+using LinearAlgebra
 using POMDPs
 using AutoViz
 using AutomotiveDrivingModels
 using AutomotivePOMDPs
 using POMDPSimulators
+using BeliefUpdaters
 using POMDPPolicies
 using DeepQLearning 
 using Flux 
@@ -25,19 +28,28 @@ includet("environment.jl")
 includet("generative_mdp.jl")
 includet("masking.jl")
 includet("cooperative_IDM.jl")
+includet("belief_updater.jl")
+includet("belief_mdp.jl")
 includet("overlays.jl")
 includet("make_gif.jl")
 
 rng = MersenneTwister(1)
 
-mdp = GenerativeMergingMDP(random_n_cars=true,max_cars=12, min_cars=8, traffic_speed = :mixed, driver_type=:random, 
+mdp = GenerativeMergingMDP(random_n_cars=true, min_cars=5,max_cars=12, traffic_speed = :mixed, driver_type=:random, 
                            observe_cooperation=true)
+for i=2:mdp.max_cars+1
+    mdp.driver_models[i] = CooperativeIDM()
+end
+pomdp = FullyObservablePOMDP(mdp)
+up = MergingUpdater(mdp)
+bmdp = GenerativeBeliefMDP{typeof(pomdp), MergingUpdater, MergingBelief,Int64}(pomdp, up)
 
-s0 = initialstate(mdp, rng)
+b0 = initialstate(bmdp, rng)
 
-svec = convert_s(Vector{Float64}, s0, mdp)
+svec = convert_s(Vector{Float64}, b0, bmdp)
 
 input_dims = length(svec)
+
 
 
 model = Chain(Dense(input_dims, 64, relu), Dense(64, 32, relu), Dense(32, n_actions(mdp)))
@@ -62,14 +74,14 @@ solver = DeepQLearningSolver(qnetwork = model,
 # solver.evaluation_policy = masked_evaluation()
 
 
-policy = solve(solver, mdp)
+policy = solve(solver, bmdp)
 
 using BSON
 BSON.@save "policy_true.bson" policy
 
 
 BSON.@load joinpath(solver.logdir,"policy_true.bson") policy
-BSON.@load "log9/policy_true.bson" policy
+BSON.@load "log12/policy_true.bson" policy
 policy = NNPolicy(mdp, policy.qnetwork, policy.action_map, policy.n_input_dims)
 
 env = MDPEnvironment(mdp)

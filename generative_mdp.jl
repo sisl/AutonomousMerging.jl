@@ -91,7 +91,7 @@ function POMDPs.initialstate(mdp::GenerativeMergingMDP, rng::AbstractRNG)
         mdp.driver_models[i] = CooperativeIDM()
         # end
         if mdp.traffic_speed == :mixed
-            v_des = sample(rng, [5.0, 10., 15.0], Weights([0.2, 0.3, 0.5]))
+            v_des = sample(rng, [4.0, 5., 6.0], Weights([0.2, 0.3, 0.5]))
         elseif mdp.traffic_speed == :fast
             v_des = 15.0
         end
@@ -142,8 +142,8 @@ function POMDPs.reward(mdp::GenerativeMergingMDP, s::AugScene, a::Int64, sp::Aug
     return r
 end
 
-function POMDPs.reward(mdp::GenerativeMergingMDP, s::AugScene, a::Int64)
-    return reward(mdp, s, a, s)
+function POMDPs.reward(pomdp::FullyObservablePOMDP{AugScene,Int64}, s::AugScene, a::Int64, sp::AugScene)
+    return reward(pomdp.mdp, s, a, sp)
 end
 
 function POMDPs.isterminal(mdp::GenerativeMergingMDP, s::AugScene)
@@ -435,8 +435,8 @@ function wrap_around(env::MergingEnvironment, veh::Vehicle)
     s_end = get_end(lane)
     s = veh.state.posF.s
     if s >= s_end - WRAP_AROUND_TOL && lane == main_lane(env) && veh.id != EGO_ID
-        veh_state = vehicle_state(0.0, main_lane(mdp.env), veh.state.v, mdp.env.roadway)
-        return Vehicle(veh_state, mdp.car_def, veh.id)
+        veh_state = vehicle_state(0.0, main_lane(env), veh.state.v, env.roadway)
+        return Vehicle(veh_state,veh.def, veh.id)
     end
     return veh
 end

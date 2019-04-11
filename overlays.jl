@@ -74,10 +74,10 @@ function AutoViz.render!(rendermodel::RenderModel, overlay::DistToMergeOverlay,
         veh = scene[vehind]
         # plot line
         A = get_front(veh)
-        add_instruction!(rendermodel, render_dashed_line, ([A.x mp.x; A.y mp.y], overlay.color_line, overlay.line_width))
+        # add_instruction!(rendermodel, render_dashed_line, ([A.x mp.x; A.y mp.y], overlay.color_line, overlay.line_width))
         dm = dist_to_merge(overlay.env, veh)
         ttm = time_to_merge(overlay.env, veh)
-        disp_point = A + VecSE2(-10.0, 2.0, 0.0)
+        disp_point = A + VecSE2(-10.0, 10.0, 0.0)
         if overlay.target_id == 1
             disp_point = A + VecSE2(-10.0, -10.0, 0.0)
         end
@@ -88,7 +88,7 @@ function AutoViz.render!(rendermodel::RenderModel, overlay::DistToMergeOverlay,
                                    line_spacing = 0.15,
                                    font_size = 20,
                                    incameraframe=true)
-        render!(rendermodel, text_overlay, scene, roadway)
+        # render!(rendermodel, text_overlay, scene, roadway)
     end
 end
 
@@ -150,9 +150,9 @@ function get_car_type_colors(scene::Scene, models::Dict{Int64, DriverModel};
         if veh.id == 1
             color_dict[1] = COLOR_CAR_EGO
         elseif models[veh.id].c == 1 && models[veh.id].idm.v_des < 15.0
-            color_dict[veh.id] = cooperative_slow
+            color_dict[veh.id] = cooperative #cooperative_slow
         elseif models[veh.id].c == 0 && models[veh.id].idm.v_des < 15.0
-            color_dict[veh.id] = aggressive_slow
+            color_dict[veh.id] = aggressive # aggressive_slow
         elseif models[veh.id].c == 1
             color_dict[veh.id] = cooperative
         elseif models[veh.id].c == 0

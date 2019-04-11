@@ -32,7 +32,7 @@ includet("make_gif.jl");
 
 rng = MersenneTwister(1)
 
-mdp = GenerativeMergingMDP(random_n_cars=true, min_cars=4, max_cars=8, observe_cooperation=true)
+mdp = GenerativeMergingMDP(random_n_cars=true, min_cars=4, max_cars=8, observe_cooperation=false)
 
 solver = DPWSolver(depth = 40,
                    exploration_constant = 1.0,
@@ -53,7 +53,7 @@ if mdp.observe_cooperation
 else
   mdp_noobs = deepcopy(mdp)
   for i=EGO_ID+1:EGO_ID+mdp_noobs.max_cars
-    mdp_noobs.driver_models[i].c = 0.
+    mdp_noobs.driver_models[i].c = 0.0
   end
   policy = solve(solver, mdp_noobs)
 end

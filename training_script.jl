@@ -1,8 +1,8 @@
-using Revise
 using Random
 using Printf
 using StatsBase
 using StaticArrays
+using Distributions
 using POMDPs
 using AutoViz
 using AutomotiveDrivingModels
@@ -20,14 +20,14 @@ using BSON
 using CSV
 using LinearAlgebra
 using ProgressMeter
-includet("environment.jl")
-includet("generative_mdp.jl")
-includet("masking.jl")
-includet("cooperative_IDM.jl")
-includet("belief_updater.jl")
-includet("overlays.jl")
+include("environment.jl")
+include("generative_mdp.jl")
+include("masking.jl")
+include("cooperative_IDM.jl")
+include("belief_updater.jl")
+include("belief_mdp.jl")
 
-BLAS.set_num_threads(8)
+# BLAS.set_num_threads(8)
 
 s = ArgParseSettings()
 @add_arg_table s begin
@@ -91,6 +91,9 @@ s = ArgParseSettings()
         help = "collision cost in the mdp formulation"
         arg_type = Float64
         default = -1.0
+    "--belief"
+        help = "train with belief updater"
+        action = :store_true
 end
 parsed_args = parse_args(s)
 
@@ -107,7 +110,18 @@ mdp = GenerativeMergingMDP(random_n_cars = true,
                            traffic_speed = Symbol(parsed_args["traffic_speed"]),
                            observe_cooperation=parsed_args["cooperation"])
 
-s0 = initialstate(mdp, rng)
+if parsed_args["belief"]
+    for i=2:mdp.max_cars+1
+        mdp.driver_models[i] = CooperativeIDM()
+    end
+    pomdp = FullyObservablePOMDP(mdp)
+    up = MergingUpdater(mdp)
+    bmdp = GenerativeBeliefMDP{typeof(pomdp), MergingUpdater, MergingBelief,Int64}(pomdp, up)
+    s0 = initialstate(bmdp, rng)
+    mdp = bmdp
+else
+    s0 = initialstate(mdp, rng)
+end
 
 svec = convert_s(Vector{Float64}, s0, mdp)
 

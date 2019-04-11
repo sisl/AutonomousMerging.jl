@@ -3,7 +3,7 @@ function POMDPs.transition(mdp::GenerativeMergingMDP, s::AugScene, a::Int64)
     rng = MersenneTwister(1)
     spred = generate_s(mdp, s, a, rng)
     s_vec = extract_features(mdp, spred)
-    sig_p = diagm(0 => [2.0 for i=1:length(s_vec)])
+    sig_p = diagm(0 => [1.0 for i=1:length(s_vec)])
     return  d = MultivariateNormal(s_vec, sig_p)
 end
 
@@ -21,9 +21,31 @@ struct MergingBelief
     # rear_main::NamedTuple{(:id, :prob),Tuple{Union{Nothing, Int64},Float64}}
 end
 
-function action(policy::NNPolicy{GenerativeMergingMDP}, b::MergingBelief)
-    action(policy, b.o)
+function POMDPs.convert_s(t::Type{V}, b::MergingBelief, mdp::GenerativeMergingMDP) where V<:AbstractArray
+    ovec = convert_s(t, b.o, mdp)
+    fore, merge, fore_main, rear_main = get_neighbors(mdp.env, b.o.scene, EGO_ID)
+    if fore.ind != nothing 
+        fore_id = b.o.scene[fore.ind].id
+        ovec[6] = b.driver_types[fore_id] > 0.5
+    end
+    if merge.ind != nothing 
+        merge_id = b.o.scene[merge.ind].id
+        ovec[9] = b.driver_types[merge_id] > 0.5
+    end
+    if fore_main.ind != nothing 
+        fore_main_id = b.o.scene[fore_main.ind].id
+        ovec[12] = b.driver_types[fore_main_id] > 0.5
+    end
+    if rear_main.ind != nothing 
+        rear_main_id = b.o.scene[rear_main.ind].id
+        ovec[15] = b.driver_types[rear_main_id] > 0.5
+    end
+    return ovec
 end
+
+# function action(policy::NNPolicy{GenerativeMergingMDP}, b::MergingBelief)
+#     action(policy, b.o)
+# end
 
 struct MergingUpdater <: Updater
     # must set observe_cooperation to false 
@@ -90,7 +112,7 @@ function update_proba!(mdp::GenerativeMergingMDP, b::MergingBelief, driver_types
     sp_vec = extract_features(mdp, o)
     old_prob = driver_types[id]
     if maximum(old_prob) ≈ 1.0
-        @show maximum(old_prob)
+        maximum(old_prob)
         return driver_types
     end
     probs = zeros(2)
