@@ -4,3 +4,5 @@
 *.gif
 *.jld2
 *log*/
+*.png
+*.tex
