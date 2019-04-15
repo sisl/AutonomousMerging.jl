@@ -1,2 +1,2 @@
-# HighwayMerging.jl
+# AutonomousMerging.jl
 
