@@ -38,7 +38,7 @@ includet("make_gif.jl");
 rng = MersenneTwister(1)
 
 mdp = GenerativeMergingMDP(random_n_cars=true, min_cars=10,max_cars=14, traffic_speed = :mixed, driver_type=:random, 
-                           observe_cooperation=true)
+                           observe_cooperation=false)
 for i=2:mdp.max_cars+1
     mdp.driver_models[i] = CooperativeIDM()
 end
@@ -70,9 +70,9 @@ s0 = initialstate(mdp, rng)
 BSON.@load "log12/policy_true.bson" policy
 rlpolicy = NNPolicy(mdp, policy.qnetwork, policy.action_map, policy.n_input_dims)
 
-solver = DPWSolver(depth = 40,
+solver = DPWSolver(depth = 1,
                    exploration_constant = 1.0,
-                   n_iterations = 100, 
+                   n_iterations = 10, 
                    k_state  = 2.0, 
                    alpha_state = 0.2, 
                    keep_tree = true,
@@ -95,6 +95,26 @@ else
   policy = solve(solver, mdp_noobs)
 end
 
+function quick_evaluation(mdp::GenerativeMergingMDP, policy::Policy, rng::AbstractRNG, n_eval=1000)
+    avg_r, avg_dr, c_rate, avg_steps, t_out = 0.0, 0.0, 0.0, 0.0, 0.0
+    @showprogress for i=1:n_eval
+        s0 = initialstate(mdp, rng)
+        hr = HistoryRecorder(rng = rng, max_steps=100)
+        hist = simulate(hr, mdp, policy, s0)
+        avg_r += undiscounted_reward(hist)
+        avg_dr += discounted_reward(hist)
+        c_rate += hist.reward_hist[end] <= mdp.collision_cost
+        t_out += n_steps(hist) >= hr.max_steps ? 1.0 : 0.0
+        avg_steps += n_steps(hist)
+    end
+    avg_r /= n_eval 
+    avg_dr /= n_eval 
+    c_rate /= n_eval
+    avg_steps /= n_eval
+    t_out /= n_eval
+    return avg_r, avg_dr, c_rate, avg_steps, t_out
+end
+
 end # @everywhere
 
 
@@ -111,32 +131,17 @@ end # @everywhere
 
 # ## run many simulations
 
+res = @showprogress pmap(x -> quick_evaluation(mdp, policy, x, 1), [MersenneTwister(i) for i=1:100])
 
-# function quick_evaluation(mdp::GenerativeMergingMDP, policy::Policy, rng::AbstractRNG, n_eval=1000)
-#     avg_r, avg_dr, c_rate, avg_steps, t_out = 0.0, 0.0, 0.0, 0.0, 0.0
-#     @showprogress for i=1:n_eval
-#         s0 = initialstate(mdp, rng)
-#         hr = HistoryRecorder(rng = rng, max_steps=100)
-#         hist = simulate(hr, mdp, policy, s0)
-#         avg_r += undiscounted_reward(hist)
-#         avg_dr += discounted_reward(hist)
-#         c_rate += undiscounted_reward(hist) <= mdp.collision_cost
-#         t_out += n_steps(hist) >= hr.max_steps ? 1.0 : 0.0
-#         avg_steps += n_steps(hist)
-#     end
-#     avg_r /= n_eval 
-#     avg_dr /= n_eval 
-#     c_rate /= n_eval
-#     avg_steps /= n_eval
-#     t_out /= n_eval
-#     return avg_r, avg_dr, c_rate, avg_steps, t_out
-# end
+c_rate = mean(x[3] for x in res)
+avg_steps = mean(x[4] for x in res)
+t_out = mean(x[5] for x in res)
 
-# avg_r, avg_dr, c_rate, avg_steps, t_out = quick_evaluation(mdp, policy, rng, 100)
+avg_r, avg_dr, c_rate, avg_steps, t_out = quick_evaluation(mdp, policy, rng, 100)
 
-# println("Collisions ", c_rate*100)
-# println("Avg steps ", avg_steps)
-# println("Time outs ", t_out*100)
+println("Collisions ", c_rate*100)
+println("Avg steps ", avg_steps)
+println("Time outs ", t_out*100)
 # println("avg disc reward ", avg_dr)
 # println("avg reward ", avg_r)
 

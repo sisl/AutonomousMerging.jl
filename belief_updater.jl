@@ -43,8 +43,43 @@ function POMDPs.convert_s(t::Type{V}, b::MergingBelief, mdp::GenerativeMergingMD
     return ovec
 end
 
-# function action(policy::NNPolicy{GenerativeMergingMDP}, b::MergingBelief)
-#     action(policy, b.o)
+function belief_weight(t::Type{V}, b::MergingBelief, mdp::GenerativeMergingMDP, state) where V <: AbstractArray
+    ovec = convert_s(t, b.o, mdp)
+    fore, merge, fore_main, rear_main = get_neighbors(mdp.env, b.o.scene, EGO_ID)
+    weight = 1.0
+    if fore.ind != nothing 
+        fore_id = b.o.scene[fore.ind].id
+        ovec[6] = state[1] #b.driver_types[fore_id] > 0.5
+        weight *= b.driver_types[fore_id]*state[1] + (1 - b.driver_types[fore_id])*(1 - state[1])
+    end
+    if merge.ind != nothing 
+        merge_id = b.o.scene[merge.ind].id
+        ovec[9] = state[2] #b.driver_types[merge_id] > 0.5
+        weight *= b.driver_types[merge_id]*state[2] + (1 - b.driver_types[merge_id])*(1 - state[2])
+    end
+    if fore_main.ind != nothing 
+        fore_main_id = b.o.scene[fore_main.ind].id
+        ovec[12] = state[3] #b.driver_types[fore_main_id] > 0.5
+        weight *= b.driver_types[fore_main_id]*state[3] + (1 - b.driver_types[fore_main_id])*(1 - state[3])
+    end
+    if rear_main.ind != nothing 
+        rear_main_id = b.o.scene[rear_main.ind].id
+        ovec[15] = state[4] #b.driver_types[rear_main_id] > 0.5
+        weight *= b.driver_types[rear_main_id]*state[4] + (1 - b.driver_types[rear_main_id])*(1 - state[4])
+    end
+    return ovec, weight
+end
+
+const driver_type_states =  collect(Iterators.product([[0,1] for i=1:4]...))
+
+# function POMDPs.action(policy::NNPolicy{GenerativeMergingMDP}, b::MergingBelief)
+#     vals = zeros(Float32,n_actions(policy.problem))
+#     for state in driver_type_states
+#         ovec, weight = belief_weight(Vector{Float32}, b, policy.problem, state)
+#         vals += weight*actionvalues(policy, ovec)
+#     end
+#     @show vals
+#     return argmax(vals[:])
 # end
 
 struct MergingUpdater <: Updater

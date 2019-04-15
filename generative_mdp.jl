@@ -45,7 +45,7 @@ A simulation environment for a highway merging scenario
     max_burn_in::Int64 = 20
     min_burn_in::Int64 = 10
     initial_ego_velocity::Float64 = 10.0
-    initial_velocity::Float64 = 15.0
+    initial_velocity::Float64 = 5.0
     initial_velocity_std::Float64 = 1.0
     main_lane_slots::LinRange{Float64} = LinRange(0.0, 
                                             env.main_lane_length + env.after_merge_length,

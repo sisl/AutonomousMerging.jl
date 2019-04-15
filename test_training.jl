@@ -31,25 +31,25 @@ includet("cooperative_IDM.jl")
 includet("belief_updater.jl")
 includet("belief_mdp.jl")
 includet("overlays.jl")
+includet("rendering.jl")
 includet("make_gif.jl")
 
 rng = MersenneTwister(1)
 
-mdp = GenerativeMergingMDP(random_n_cars=true, min_cars=5,max_cars=12, traffic_speed = :mixed, driver_type=:random, 
+mdp = GenerativeMergingMDP(random_n_cars=true, min_cars=10,max_cars=14, traffic_speed = :mixed, driver_type=:random, 
                            observe_cooperation=true)
 for i=2:mdp.max_cars+1
     mdp.driver_models[i] = CooperativeIDM()
 end
-pomdp = FullyObservablePOMDP(mdp)
-up = MergingUpdater(mdp)
-bmdp = GenerativeBeliefMDP{typeof(pomdp), MergingUpdater, MergingBelief,Int64}(pomdp, up)
+# pomdp = FullyObservablePOMDP(mdp)
+# up = MergingUpdater(mdp)
+# bmdp = GenerativeBeliefMDP{typeof(pomdp), MergingUpdater, MergingBelief,Int64}(pomdp, up)
 
-b0 = initialstate(bmdp, rng)
+s0 = initialstate(mdp, rng)
 
-svec = convert_s(Vector{Float64}, b0, bmdp)
+svec = convert_s(Vector{Float64}, s0, mdp)
 
 input_dims = length(svec)
-
 
 
 model = Chain(Dense(input_dims, 64, relu), Dense(64, 32, relu), Dense(32, n_actions(mdp)))
@@ -73,15 +73,14 @@ solver = DeepQLearningSolver(qnetwork = model,
 # solver.exploration_policy = masked_linear_epsilon_greedy(solver.max_steps, solver.eps_fraction, solver.eps_end)
 # solver.evaluation_policy = masked_evaluation()
 
-
-policy = solve(solver, bmdp)
+policy = solve(solver, mdp)
 
 using BSON
 BSON.@save "policy_true.bson" policy
 
 
 BSON.@load joinpath(solver.logdir,"policy_true.bson") policy
-BSON.@load "log12/policy_true.bson" policy
+BSON.@load "log13/policy_false.bson" policy
 policy = NNPolicy(mdp, policy.qnetwork, policy.action_map, policy.n_input_dims)
 
 env = MDPEnvironment(mdp)
@@ -93,16 +92,29 @@ DeepQLearning.evaluation(solver.evaluation_policy,
 
 # policy = MaskedPolicy(policy)
 s0 = initialstate(mdp, rng);
+mdp.driver_models[6].c = 0.0
 hr = HistoryRecorder(rng = rng, max_steps=100);
 hist = simulate(hr, mdp, policy, s0);
 
 include("visualizer.jl");
 
+i = 36
+s = hist.state_hist[i]
+c = AutoViz.render(s.scene, mdp.env.roadway, cam = StaticCamera(VecE2(-15.0, -10.0), 16.0),
+                MergingNeighborsOverlay(target_id=EGO_ID, env=mdp.env)
+                car_colors=get_car_type_colors(s0.scene, mdp.driver_models),
+               canvas_height=400)
+
+write_to_png(c, "snap-bis$i.png")
+
+i = 36
+hist.action_hist[i], hist.state_hist[i].ego_info.acc, get_by_id(hist.state_hist[i].scene, 1).state.v
+
 make_gif(hist, mdp)
 
 ## run many simulations
 
-function quick_evaluation(mdp::GenerativeMergingMDP, policy::Policy, rng::AbstractRNG, n_eval=1000)
+function quick_evaluation(mdp::MDP, policy::Policy, rng::AbstractRNG, n_eval=1000)
     avg_r, avg_dr, c_rate, avg_steps, t_out = 0.0, 0.0, 0.0, 0.0, 0.0
     @showprogress for i=1:n_eval
         s0 = initialstate(mdp, rng)
@@ -110,7 +122,7 @@ function quick_evaluation(mdp::GenerativeMergingMDP, policy::Policy, rng::Abstra
         hist = simulate(hr, mdp, policy, s0)
         avg_r += undiscounted_reward(hist)
         avg_dr += discounted_reward(hist)
-        c_rate += undiscounted_reward(hist) <= mdp.collision_cost
+        c_rate += undiscounted_reward(hist) <= -1
         t_out += n_steps(hist) >= hr.max_steps ? 1.0 : 0.0
         avg_steps += n_steps(hist)
     end
@@ -122,7 +134,7 @@ function quick_evaluation(mdp::GenerativeMergingMDP, policy::Policy, rng::Abstra
     return avg_r, avg_dr, c_rate, avg_steps, t_out
 end
 
-avg_r, avg_dr, c_rate, avg_steps, t_out = quick_evaluation(mdp, policy, rng, 10000)
+avg_r, avg_dr, c_rate, avg_steps, t_out = quick_evaluation(bmdp, policy, rng, 100)
 
 println("Collisions ", c_rate*100)
 println("Avg steps ", avg_steps)
