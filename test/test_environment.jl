@@ -34,7 +34,3 @@ veh1 = Vehicle(propagate(veh1, LaneFollowingAccel(0.0), env.roadway, 1.0), Vehic
 s = Scene()
 push!(s, veh1)
 AutoViz.render(s, env.roadway, cam=FitToContentCamera(0.0))
-
-
-
-env.roadway

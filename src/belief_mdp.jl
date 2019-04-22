@@ -20,7 +20,3 @@ end
 POMDPs.isterminal(bmdp::BT, b::MergingBelief) = isterminal(bmdp.pomdp.mdp, b.o)
 
 POMDPs.n_actions(bmdp::BT) = n_actions(bmdp.pomdp.mdp)
-
-# function POMDPModelTools.gbmdp_handle_terminal(pomdp::POMDP, updater::MergingUpdater, b, s, a, rng)
-#     return b
-# end

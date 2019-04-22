@@ -1,9 +1,3 @@
-@with_kw mutable struct MergingFeaturesOverlay <: SceneOverlay
-    target_id::Int64 = 0
-    color::Colorant = colorant"blue"
-    line_width::Float64=0.5
-end
-
 @with_kw mutable struct MergingNeighborsOverlay <: SceneOverlay 
     target_id::Int64 = 0 
     env::MergingEnvironment = MergingEnvironment()

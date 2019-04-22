@@ -12,13 +12,17 @@ function POMDPs.observation(mdp::GenerativeMergingMDP, a::Int64, s)
     return MultivariateNormal(s, sig_o)
 end
 
+"""
+    MergingBelief
+A type to represent belief state. It consists of the current observation `o` and the estimated driver types represented
+by a dictionnary mapping ID to cooperation levels.
+# fields 
+- `o::AugScene`
+- `driver_types::Dict{Int64, Float64}`
+"""
 struct MergingBelief
     o::AugScene
     driver_types::Dict{Int64, Float64}
-    # fore::NamedTuple{(:id, :prob),Tuple{Union{Nothing, Int64},Float64}}
-    # merge::NamedTuple{(:id, :prob),Tuple{Union{Nothing, Int64},Float64}}
-    # fore_main::NamedTuple{(:id, :prob),Tuple{Union{Nothing, Int64},Float64}}
-    # rear_main::NamedTuple{(:id, :prob),Tuple{Union{Nothing, Int64},Float64}}
 end
 
 function POMDPs.convert_s(t::Type{V}, b::MergingBelief, mdp::GenerativeMergingMDP) where V<:AbstractArray
@@ -72,16 +76,11 @@ end
 
 const driver_type_states =  collect(Iterators.product([[0,1] for i=1:4]...))
 
-# function POMDPs.action(policy::NNPolicy{GenerativeMergingMDP}, b::MergingBelief)
-#     vals = zeros(Float32,n_actions(policy.problem))
-#     for state in driver_type_states
-#         ovec, weight = belief_weight(Vector{Float32}, b, policy.problem, state)
-#         vals += weight*actionvalues(policy, ovec)
-#     end
-#     @show vals
-#     return argmax(vals[:])
-# end
-
+"""
+    MergingUpdater <: Updater
+A belief updater for `MergingBelief`. It sets `o` to the current observation and updates 
+the belief on the drivers cooperation level using Bayes' rule
+"""
 struct MergingUpdater <: Updater
     # must set observe_cooperation to false 
     # must fill in all the driver models and make a deepcopy
@@ -104,11 +103,6 @@ function POMDPs.update(up::MergingUpdater, b_old::MergingBelief, a::Int64, o::Au
         update_proba!(up.mdp, b_old, driver_types, a, o, i)
     end
     return MergingBelief(o, driver_types)
-    # bfore = update_proba(up.mdp, b_neigh, a, o, :fore)
-    # bmerge = update_proba(up.mdp, b_neigh, a, o, :merge)
-    # bfore_main = update_proba(up.mdp, b_neigh, a, o, :fore_main)
-    # brear_main = update_proba(up.mdp, b_neigh, a, o, :rear_main)
-    # return MergingBelief(o, bfore, bmerge, bfore_main, brear_main)
 end
 
 function update_neighbors(mdp::GenerativeMergingMDP, b::MergingBelief, o::AugScene)
@@ -167,34 +161,11 @@ function update_proba!(mdp::GenerativeMergingMDP, b::MergingBelief, driver_types
     return driver_types
 end
 
-# function update_proba(mdp::GenerativeMergingMDP, b::MergingBelief, a::Int64, o::AugScene, neighbor::Symbol)
-#     @show neigh = getfield(b, neighbor)
-#     if neigh.id == nothing 
-#         return (id=nothing, prob=0.5)
-#     else
-#         @show sp_vec = extract_features(mdp, o)
-#         probs = zeros(2)
-#         for c in [0, 1]
-#             for v_des in [5.0, 10.0, 15.0]
-#                 mdp.driver_models[neigh.id].c = c
-#                 set_desired_speed!(mdp.driver_models[neigh.id], v_des)
-#                 d = transition(mdp, b.o, a)
-#                 @show mean(d)
-#                 @show probs[Int(c + 1)] += pdf(d, sp_vec)*(c*neigh.prob + (1 - c)*neigh.prob)
-#             end
-#         end
-#         @show normalize!(probs, 1)
-#         return (id=neigh.id, prob=probs[2])
-#     end
-# end
-
 function BeliefUpdaters.initialize_belief(up::MergingUpdater, s0::AugScene)
     driver_types = Dict{Int64, Float64}()
     for i=2:up.mdp.max_cars+1
         driver_types[i] = 0.5
     end
     b0 = MergingBelief(s0, driver_types)
-    # b0 = MergingBelief(s0, (id=nothing, prob=0.5), (id=nothing, prob=0.5), (id=nothing, prob=0.5), (id=nothing, prob=0.5))
-    # b0 = update_neighbors(up.mdp, b0, s0)
     return b0
 end

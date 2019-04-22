@@ -11,8 +11,19 @@ julia:
 matrix:
   allow_failures:
     - julia: nightly
+addons:
+ apt: # apt-get for linux
+   packages:
+   - libgtk-3-dev
 notifications:
   email: false
 
+script:
+  - git clone https://github.com/JuliaRegistries/General  $(julia -e 'import Pkg; println(joinpath(Pkg.depots1(), "registries", "General"))')  
+  - git clone https://github.com/SISL/Registry  $(julia -e 'import Pkg; println(joinpath(Pkg.depots1(), "registries", "SISL"))')  
+  - git clone https://github.com/JuliaPOMDP/Registry  $(julia -e 'import Pkg; println(joinpath(Pkg.depots1(), "registries", "JuliaPOMDP"))')  
+  - if [[ -a .git/shallow ]]; then git fetch --unshallow; fi
+  - julia --project --color=yes -e 'import Pkg; Pkg.build(); Pkg.test(coverage=true)'
 after_success:
+  - julia --project -e 'import Pkg; Pkg.add("Coverage"); using Coverage; Codecov.submit(Codecov.process_folder())'
   - julia --project -e 'import Pkg; Pkg.add("Coverage"); using Coverage; Coveralls.submit(Coveralls.process_folder())'

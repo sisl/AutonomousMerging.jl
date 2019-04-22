@@ -1,5 +1,3 @@
-using Reel
-
 function make_gif(hist, mdp, belief_hist=nothing)
     frames = Frames(MIME("image/png"), fps=6);
     for step in 1:n_steps(hist)+1

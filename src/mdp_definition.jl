@@ -2,6 +2,11 @@
 
 const MergingState = Vector{Float64} #SVector{5, Float64} # se, ve, ae, so, vo
 
+"""
+    MergingMDP <: MDP{MergingState, Int64}
+A discrete state and action MDP representing a merging scenario with only two agents: 
+the ego vehicle on the merge lane and another traffic participant on the main lane.
+"""
 @with_kw mutable struct MergingMDP <: MDP{MergingState, Int64}
     env::MergingEnvironment = MergingEnvironment()
     cardef::VehicleDef = CARDEF

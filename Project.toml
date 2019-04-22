@@ -1,0 +1,26 @@
+name = "AutonomousMerging"
+uuid = "18677a90-5fa8-11e9-205f-47359215bfb0"
+repo = "https://github.com/sisl/AutonomousMerging.jl"
+version = "0.0.0"
+
+[deps]
+AutoViz = "82aa6e0c-a491-5edf-8d4b-c16b98e4ea17"
+AutomotiveDrivingModels = "99497e54-f3d6-53d3-a3a9-fa9315a7f1ba"
+AutomotivePOMDPs = "dca8afc0-c686-11e8-0934-712707da73aa"
+BeliefUpdaters = "8bb6e9a1-7d73-552c-a44a-e5dc5634aac4"
+GridInterpolations = "bb4c363b-b914-514b-8517-4eb369bc008a"
+POMDPModelTools = "08074719-1b2a-587c-a292-00f91cc44415"
+POMDPs = "a93abf59-7444-517b-a68a-c42f96afdd7d"
+Parameters = "d96e819e-fc66-5662-9728-84c9c7592b0a"
+Printf = "de0858da-6303-5e67-8744-51eddeeeb8d7"
+Random = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"
+StaticArrays = "90137ffa-7385-5640-81b9-e52037218182"
+StatsBase = "2913bbd2-ae8a-5f71-8c99-4fb6c76f3a91"
+
+[extras]
+POMDPPolicies = "182e52fb-cfd0-5e46-8c26-fd0667c990f4"
+POMDPSimulators = "e0d0a172-29c6-5d4e-96d0-f262df5d01fd"
+Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
+
+[targets]
+test = ["POMDPPolicies","POMDPSimulators", "Test"]

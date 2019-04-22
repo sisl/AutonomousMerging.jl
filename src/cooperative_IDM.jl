@@ -1,6 +1,20 @@
+"""
+    CooperativeIDM <: DriverModel{LaneFollowingAccel}
+The cooperative IDM (c-IDM) is a rule based driver model for merging scenarios. 
+It controls the longitudinal actions of vehicles on the main lane. 
+A cooperation level `c` controls how the vehicles reacts to the merging vehicle. 
+When `c=0` the vehicle ignores the merging vehicle. When `c=1` the vehicle considers the merging 
+vehicle as its front car when TTC_ego > TTC_mergin_vehicle. When it is not considering the merging vehicle, 
+the car follows the IntelligentDriverModel.
+
+# Fields 
+    - `env::MergingEnvironment = MergingEnvironment(main_lane_angle = 0.0, merge_lane_angle = pi/6)` the merging environment
+    - `idm::IntelligentDriverModel = IntelligentDriverModel(v_des = env.main_lane_vmax, d_cmf = 2.0, d_max=2.0, T = 1.5, s_min = 2.0, a_max = 2.0)` the default IDM
+    - `c::Float64 = 0.0` the cooperation level
+    - `fov::Float64 = 20.0` [m] A field of view, the merging vehicle is not considered if it is further than `fov`
+"""
 @with_kw mutable struct CooperativeIDM <: DriverModel{LaneFollowingAccel}
     env::MergingEnvironment = MergingEnvironment(main_lane_angle = 0.0, merge_lane_angle = pi/6)
-    ttm_threshold::Float64 = 2.5 # threshold on the time to merge 
     idm::IntelligentDriverModel = IntelligentDriverModel(v_des = env.main_lane_vmax, 
                                                          d_cmf = 2.0, 
                                                          d_max=2.0,
@@ -9,7 +23,6 @@
                                                          a_max = 2.0)
     c::Float64 = 0.0 # cooperation level
     fov::Float64 = 20.0 # when to consider merge car
-    a_min::Float64 = -2.0 # minimum acceleration
     # internals
     a::Float64 = 0.0
     a_merge::Float64 = 0.0
@@ -89,55 +102,14 @@ function AutomotiveDrivingModels.observe!(model::CooperativeIDM, scene::Scene, r
                 model.a = model.a_idm 
                 model.front_car = false
             end
-        # else
-        #     model.consider_merge = true
-        #     # println("Ego TTM >= Merge TTM, predicting")
-        #     vehp = constant_acceleration_prediction(model.env, veh, model.other_acc, veh_ttm, model.env.main_lane_vmax)
-        #     egop = constant_acceleration_prediction(model.env, ego, model.a, veh_ttm, model.idm.v_des)
-        #     # vehp.state
-        #     # egop.state
-        #     dist_at_merge = distance_projection(model.env, vehp) - distance_projection(model.env, egop)
-        #     model.dist_at_merge = dist_at_merge
-        #     # t_coll = collision_time(model.env, egop, vehp, model.a_merge, model.a_min)
-        #     # d_brake = t_coll == nothing ? 0 : braking_distance(egop.state.v, t_coll, model.a_min)
-        #     v_oth = vehp.state.v
-        #     v_ego = egop.state.v 
-        #     Δv = v_oth - v_ego
-        #     headway = dist_at_merge
-        #     s_des = model.idm.s_min + v_ego*model.idm.T - v_ego*Δv / (2*sqrt(model.idm.a_max*model.idm.d_cmf))
-        #     # @show t_coll
-        #     # @show d_brake
-        #     # @show dist_at_merge
-        #     # @show s_des
-        #     model.s_des = s_des
-        #     if dist_at_merge > model.c*s_des
-        #         # println("predicted distance at merge > s_des, ignoring")
-        #         model.a = model.a_idm
-        #         model.front_car = false
-        #     # elseif dist_at_merge <= d_brake
-        #     # elseif dist_at_merge <= s_des + (1 - model.c)*(d_brake - s_des)
-        #     elseif dist_at_merge <= model.c*s_des
-        #         # if d_brake <= dist_at_merge
-        #             # println("critical distance predicted")
-        #         # end
-        #         # consider veh as front car and apply IDM 
-        #         model.front_car = true
-        #         # println("consider merge car as front car")
-        #         headway = distance_projection(model.env, veh) - distance_projection(model.env, ego) 
-        #         v_oth = veh.state.v
-        #         v_ego = ego.state.v
-        #         # @show "tracking front car"
-        #         track_longitudinal!(model.idm, v_ego, v_oth, headway)
-        #         model.a_merge = model.idm.a
-        #         model.a = min(model.a_merge, model.a_idm)
-        #     end
         end
     end
     return model
 end
 
 """
-find the first vehicle on the lane
+    findfirst_lane(scene::Scene, lane::Lane)
+find the first vehicle on the lane (in terms of longitudinal position)
 """
 function findfirst_lane(scene::Scene, lane::Lane)
     s_min = Inf
@@ -152,30 +124,3 @@ function findfirst_lane(scene::Scene, lane::Lane)
     end
     return vehmin, vehind
 end
-# function AutomotiveDrivingModels.observe!(model::CooperativeIDM, scene::Scene, roadway::Roadway, egoid::Int)
-#     observe!(model.idm, scene, roadway, egoid)
-#     a_idm = model.idm.a
-#     model.a_idm = a_idm
-#     model.a = a_idm
-#     veh = find_merge_vehicle(model.env, scene)
-#     if veh != nothing 
-#         ego = get_by_id(scene, egoid)
-#         @show ego_ttm = time_to_merge(model.env, ego)
-#         @show ttm = time_to_merge(model.env, veh)
-#         a_merge = a_idm
-#         if ttm < model.ttm_threshold
-#             v_ego =  ego.state.v
-#             headway = -dist_to_merge(model.env, ego)
-#             v_oth = veh.state.v
-#             if headway > 0.
-#                 track_longitudinal!(model.idm, v_ego, v_oth, headway)
-#                 @show a_merge = model.idm.a
-#                 model.a = min(a_idm, a_merge)
-#             end
-#             model.a_merge = a_merge
-#         end
-#     end    
-#     return model
-# end
-
-
