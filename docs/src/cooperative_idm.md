@@ -1,0 +1,5 @@
+# Cooperative IDM 
+
+```@docs 
+    CooperativeIDM
+```

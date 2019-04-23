@@ -1,0 +1,5 @@
+# Merging MDP
+
+```@docs
+    MergingMDP
+```
