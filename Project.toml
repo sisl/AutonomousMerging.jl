@@ -1,7 +1,7 @@
 name = "AutonomousMerging"
 uuid = "18677a90-5fa8-11e9-205f-47359215bfb0"
 repo = "https://github.com/sisl/AutonomousMerging.jl"
-version = "0.0.0"
+version = "0.1.0"
 
 [deps]
 AutoViz = "82aa6e0c-a491-5edf-8d4b-c16b98e4ea17"
