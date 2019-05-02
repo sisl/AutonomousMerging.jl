@@ -1,43 +1,19 @@
 using Revise
-using Random
-using Printf
-using StatsBase
-using StaticArrays
-using Distributions
-using LinearAlgebra
-using POMDPs
-using AutoViz
+using AutonomousMerging
 using AutomotiveDrivingModels
-using AutomotivePOMDPs
+using Random
+using POMDPs
 using POMDPSimulators
-using BeliefUpdaters
-using POMDPPolicies
-using DeepQLearning 
-using Flux 
-using RLInterface
-using POMDPModelTools
-using TensorBoardLogger
-using ProgressMeter
-# using Interact
-# using Blink
-using MCTS
+using DeepQLearning
+using Flux
+using BSON
 using Reel
-
-# LOGGER = Logger("log1", overwrite=true)
-includet("environment.jl")
-includet("generative_mdp.jl")
-includet("masking.jl")
-includet("cooperative_IDM.jl")
-includet("belief_updater.jl")
-includet("belief_mdp.jl")
-includet("overlays.jl")
-includet("rendering.jl")
-includet("make_gif.jl")
+include("scripts/make_gif.jl")
 
 rng = MersenneTwister(1)
 
 mdp = GenerativeMergingMDP(random_n_cars=true, min_cars=10,max_cars=14, traffic_speed = :mixed, driver_type=:random, 
-                           observe_cooperation=true)
+                           observe_cooperation=false)
 for i=2:mdp.max_cars+1
     mdp.driver_models[i] = CooperativeIDM()
 end
@@ -51,8 +27,8 @@ svec = convert_s(Vector{Float64}, s0, mdp)
 
 input_dims = length(svec)
 
-
 model = Chain(Dense(input_dims, 64, relu), Dense(64, 32, relu), Dense(32, n_actions(mdp)))
+# do not run if you just want to load a policy
 solver = DeepQLearningSolver(qnetwork = model, 
                       max_steps = 1_000_000,
                       eps_fraction = 0.5,
@@ -70,18 +46,16 @@ solver = DeepQLearningSolver(qnetwork = model,
                       prioritized_replay = true,
                       verbose = true, 
                       rng = rng)
-# solver.exploration_policy = masked_linear_epsilon_greedy(solver.max_steps, solver.eps_fraction, solver.eps_end)
-# solver.evaluation_policy = masked_evaluation()
 
 policy = solve(solver, mdp)
 
-using BSON
 BSON.@save "policy_true.bson" policy
 
 
 BSON.@load joinpath(solver.logdir,"policy_true.bson") policy
-BSON.@load "log13/policy_false.bson" policy
-policy = NNPolicy(mdp, policy.qnetwork, policy.action_map, policy.n_input_dims)
+BSON.@load "log13/qnetwork.bson" qnetwork
+Flux.loadparams!(model, qnetwork)
+policy = NNPolicy(mdp, model, collect(actions(mdp)), 1)
 
 env = MDPEnvironment(mdp)
 DeepQLearning.evaluation(solver.evaluation_policy, 
@@ -92,9 +66,10 @@ DeepQLearning.evaluation(solver.evaluation_policy,
 
 # policy = MaskedPolicy(policy)
 s0 = initialstate(mdp, rng);
-mdp.driver_models[6].c = 0.0
 hr = HistoryRecorder(rng = rng, max_steps=100);
 hist = simulate(hr, mdp, policy, s0);
+
+make_gif(hist, mdp)
 
 include("visualizer.jl");
 

@@ -28,6 +28,6 @@ function super_render(mdp, s, b=nothing)
             # cam = StaticCamera(VecE2(-25.0, -10.0), 6.0),
             cam = StaticCamera(VecE2(-25.0, -10.0), 6.0),
             #   car_colors = Dict{Int64, Colorant}(1 => COLOR_CAR_EGO)
-            car_colors=get_car_type_colors(s0.scene, mdp.driver_models)
+            car_colors=get_car_type_colors(s.scene, mdp.driver_models)
             )
 end
