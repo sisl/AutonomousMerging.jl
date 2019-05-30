@@ -221,10 +221,10 @@ end
 function AutomotiveDrivingModels.tick!(
     scene::EntityFrame{S,D,I},
     roadway::R,
-    actions::Vector{LaneFollowingAccel},
+    actions::Vector{A},
     Δt::Float64,
     nobackup::Bool
-    ) where {S,D,I,R}
+    ) where {S,D,I,R,A}
 
     for i in 1 : length(scene)
         veh = scene[i]
