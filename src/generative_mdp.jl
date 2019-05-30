@@ -37,9 +37,9 @@ A simulation environment for a highway merging scenario. Implemented using POMDP
     - `default_driver_model::DriverModel{LaneFollowingAccel} = IntelligentDriverModel(v_des=env.main_lane_vmax)`
     - `observe_cooperation::Bool = false`
     - `observe_speed::Bool = true`
-    - `traffic_speed::Symbol = :mixed`
+    - `traffic_speed::String = "mixed"`
     - `random_n_cars::Bool = false`
-    - `driver_type::Symbol = :random`
+    - `driver_type::String = "random"`
     - `max_burn_in::Int64 = 20`
     - `min_burn_in::Int64 = 10`
     - `initial_ego_velocity::Float64 = 10.0`
@@ -70,9 +70,9 @@ A simulation environment for a highway merging scenario. Implemented using POMDP
     observe_cooperation::Bool = false
     observe_speed::Bool = true
     # initial state params
-    traffic_speed::Symbol = :mixed
+    traffic_speed::String = "mixed"
     random_n_cars::Bool = false
-    driver_type::Symbol = :random
+    driver_type::String = "random"
     max_burn_in::Int64 = 20
     min_burn_in::Int64 = 10
     initial_ego_velocity::Float64 = 10.0
@@ -113,17 +113,17 @@ function POMDPs.initialstate(mdp::GenerativeMergingMDP, rng::AbstractRNG)
         veh = Vehicle(veh_state, mdp.car_def, i)
         push!(s0, veh)
         mdp.driver_models[i] = CooperativeIDM()
-        if mdp.traffic_speed == :mixed
+        if mdp.traffic_speed == "mixed"
             v_des = sample(rng, [4.0, 5., 6.0], Weights([0.2, 0.3, 0.5]))
-        elseif mdp.traffic_speed == :fast
+        elseif mdp.traffic_speed == "fast"
             v_des = 15.0
         end
         set_desired_speed!(mdp.driver_models[i], v_des)
-        if mdp.driver_type == :random
+        if mdp.driver_type == "random"
             mdp.driver_models[i].c = rand(rng, [0,1]) # change cooperativity
-        elseif mdp.driver_type == :aggressive
+        elseif mdp.driver_type == "aggressive"
             mdp.driver_models[i].c = 0.0
-        elseif mdp.driver_type == :cooperative
+        elseif mdp.driver_type == "cooperative"
             mdp.driver_models[i].c = 1.0
         end   
     end
