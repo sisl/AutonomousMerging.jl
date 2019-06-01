@@ -29,7 +29,7 @@ end
     rng = MersenneTwister(1)
     mdp = GenerativeMergingMDP(max_cars=12, 
                                min_cars=10,
-                               driver_type = :random, 
+                               driver_type = "random", 
                                observe_cooperation = true, 
                                initial_ego_velocity=0.0)
     s0 = initialstate(mdp, rng)
@@ -64,3 +64,5 @@ end
     hist = simulate(hr, mdp, policy, s0)
 
 end
+
+include("test_python_interface.jl")

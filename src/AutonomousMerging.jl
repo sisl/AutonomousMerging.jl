@@ -12,6 +12,8 @@ using GridInterpolations
 using AutomotiveDrivingModels
 using AutoViz
 using AutomotivePOMDPs
+using Cairo
+using Reel
 
 const EGO_ID = 1
 
@@ -77,5 +79,6 @@ export MergingNeighborsOverlay,
 
 include("overlays.jl")
 include("rendering.jl")
+include("python_interface.jl")
 
 end

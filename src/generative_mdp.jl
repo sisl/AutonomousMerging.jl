@@ -97,15 +97,32 @@ POMDPs.actionindex(mdp::GenerativeMergingMDP, a::Int64) = a
 
 function POMDPs.initialstate(mdp::GenerativeMergingMDP, rng::AbstractRNG)
     s0 = Scene()
+
+    # Set the number of cars on the main lane
     if mdp.random_n_cars
         mdp.n_cars_main = rand(rng, mdp.min_cars:mdp.max_cars)
+    else
+        mdp.n_cars_main = mdp.max_cars
     end
-    mdp.driver_models = Dict{Int64, DriverModel}(EGO_ID=>EgoDriver(LaneFollowingAccel(0.0)))
-    start_positions = sample(rng, mdp.main_lane_slots, mdp.n_cars_main, replace=false)   
 
-    start_velocities = mdp.initial_velocity .+ mdp.initial_velocity_std*randn(rng, mdp.n_cars_main)
+    # init driver models
+    mdp.driver_models = Dict{Int64, DriverModel}(EGO_ID=>EgoDriver(LaneFollowingAccel(0.0)))
+
+    # sample start positions
+    if mdp.n_cars_main > 0
+        start_positions = sample(rng, mdp.main_lane_slots, mdp.n_cars_main, replace=false)   
+    end
+
+    # sample start velocities
+    if mdp.n_cars_main > 0
+        start_velocities = mdp.initial_velocity .+ mdp.initial_velocity_std*randn(rng, mdp.n_cars_main)
+    end
+
+    # initialize ego vehicle
     ego = initial_merge_car_state(mdp, rng, EGO_ID)
     ego_acc_0 = 0.0
+
+    # populate initial scene and instantiate driver models
     scene = s0
     for i=EGO_ID+1:EGO_ID+mdp.n_cars_main
         veh_state = vehicle_state(start_positions[i - EGO_ID], main_lane(mdp.env),
@@ -127,7 +144,8 @@ function POMDPs.initialstate(mdp::GenerativeMergingMDP, rng::AbstractRNG)
             mdp.driver_models[i].c = 1.0
         end   
     end
-    # burn in 
+
+    # burn in simulation steps
     acts = Vector{LaneFollowingAccel}(undef, length(scene))
     burn_in =rand(rng, mdp.min_burn_in:mdp.max_burn_in)
     scene = s0
@@ -345,10 +363,11 @@ function POMDPs.convert_s(::Type{V}, s::AugScene, mdp::GenerativeMergingMDP) whe
     return normalize_features!(mdp, feature_vec)
 end
 
+#XXX BROKEN
 function POMDPs.convert_s(::Type{AugScene}, o::V, mdp::GenerativeMergingMDP) where V<:AbstractArray
     feature_vec = deepcopy(o)
     unnormalize_features!(mdp, feature_vec)
-    s_ego, v_ego, s_front, v_front, s_fm, v_fm, s_rm, v_rm, s_m, v_m, a_ego = feature_vec[1:11]
+    s_ego, v_ego, a_ego, s_front, v_front, c_front, s_fm, v_fm, c_fm, s_rm, v_rm, c_rm, s_m, v_m, c_m= feature_vec[1:15]
 
     # reconstruct the scene
     scene = Scene()
