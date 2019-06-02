@@ -57,9 +57,10 @@ convert a scene object to a feature vector
 for each other car 
     - car position on main lane
     - car speed
+- collision indicator
 """
 function scene_to_vec(mdp::GenerativeMergingMDP, s::AugScene)
-    n_features = 2*mdp.n_cars_main + 3
+    n_features = 2*mdp.n_cars_main + 4
     features = zeros(n_features)
     ego = get_by_id(s.scene, EGO_ID)
     features[1] = dist_to_merge(mdp.env, ego)
@@ -71,6 +72,7 @@ function scene_to_vec(mdp::GenerativeMergingMDP, s::AugScene)
         features[2*i-1] = veh.state.posF.s
         features[2*i] = veh.state.v
     end
+    features[end] = is_crash(s.scene)
     return features 
 end
 
