@@ -69,8 +69,8 @@ function scene_to_vec(mdp::GenerativeMergingMDP, s::AugScene)
     @assert s.scene[1].id == EGO_ID
     for i=2:length(s.scene)
         veh = s.scene[i]
-        features[2*i-1] = veh.state.posF.s
-        features[2*i] = veh.state.v
+        features[2*i] = veh.state.posF.s
+        features[2*i+1] = veh.state.v
     end
     features[end] = is_crash(s.scene)
     return features 
@@ -96,7 +96,7 @@ function vec_to_scene(mdp::GenerativeMergingMDP, features::Vector{Float64})
     ego = Vehicle(vehicle_state(s_ego, lane_ego, v_ego, mdp.env.roadway), VehicleDef(), EGO_ID)
     push!(scene, ego)
     for i=2:mdp.n_cars_main+1
-        veh = Vehicle(vehicle_state(features[2*i-1], main_lane(mdp.env), features[2*i], mdp.env.roadway),
+        veh = Vehicle(vehicle_state(features[2*i], main_lane(mdp.env), features[2*i+1], mdp.env.roadway),
                       VehicleDef(), i)
         push!(scene, veh)
     end
