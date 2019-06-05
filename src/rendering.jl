@@ -3,7 +3,7 @@ function super_render(mdp, s, b=nothing)
     overlays = SceneOverlay[
                         # IDOverlay(color=colorant"white",font_size=20),
                         # MergingNeighborsOverlay(target_id=EGO_ID, env=mdp.env),
-                        # DistToMergeOverlay(target_id=EGO_ID, env=mdp.env),
+                        DistToMergeOverlay(target_id=EGO_ID, env=mdp.env),
                         # DistToMergeOverlay(target_id=10, env=mdp.env),
                         #    DistToMergeOverlay(target_id=3, env=mdp.env),
                         #    DistToMergeOverlay(target_id=6, env=mdp.env),

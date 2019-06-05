@@ -68,7 +68,7 @@ function AutoViz.render!(rendermodel::RenderModel, overlay::DistToMergeOverlay,
         veh = scene[vehind]
         # plot line
         A = get_front(veh)
-        # add_instruction!(rendermodel, render_dashed_line, ([A.x mp.x; A.y mp.y], overlay.color_line, overlay.line_width))
+        add_instruction!(rendermodel, render_dashed_line, ([A.x mp.x; A.y mp.y], overlay.color_line, overlay.line_width))
         dm = dist_to_merge(overlay.env, veh)
         ttm = time_to_merge(overlay.env, veh)
         disp_point = A + VecSE2(-10.0, 10.0, 0.0)
@@ -82,7 +82,7 @@ function AutoViz.render!(rendermodel::RenderModel, overlay::DistToMergeOverlay,
                                    line_spacing = 0.15,
                                    font_size = 20,
                                    incameraframe=true)
-        # render!(rendermodel, text_overlay, scene, roadway)
+        render!(rendermodel, text_overlay, scene, roadway)
     end
 end
 
