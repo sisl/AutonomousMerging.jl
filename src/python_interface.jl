@@ -19,16 +19,16 @@ function py_generate_s(mdp::GenerativeMergingMDP, o::Vector{Float64}, acc::Float
     s = vec_to_scene(mdp, o)
     scene = deepcopy(s.scene)
     ego_acc = LaneFollowingAccel(acc)
-    # models = init_driver_models(mdp, s.ego_info.acc)
-    # models[EGO_ID].a = ego_acc
-    mdp.driver_models[EGO_ID].a = ego_acc
+    models = init_driver_models(mdp, s.ego_info.acc)
+    models[EGO_ID].a = ego_acc
+    # mdp.driver_models[EGO_ID].a = ego_acc
     acts = Vector{LaneFollowingAccel}(undef, length(scene))
 
     # call driver models 
     for i=EGO_ID+1:EGO_ID+mdp.n_cars_main
-        mdp.driver_models[i].other_acc = s.ego_info.acc
+        models[i].other_acc = s.ego_info.acc
     end
-    get_actions!(acts, scene, mdp.env.roadway, mdp.driver_models)
+    get_actions!(acts, scene, mdp.env.roadway, models)
 
     # update scene 
     tick!(scene, mdp.env.roadway, acts, mdp.dt, true)
