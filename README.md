@@ -8,7 +8,7 @@ Maintainer: Maxime Bouton (boutonm@stanford.edu)
 
 This code base implements an autonomous merging scenario using [POMDPs.jl](https:://github.com/JuliaPOMDP/POMDPs.jl)
 and [AutomotiveDrivingModels.jl](https://github.com/sisl/AutomotiveDrivingModels.jl) described in the paper:
-M. Bouton, A. Nakhaei, K. Fujimura, M. J. Kochenderfer, "Cooperation-Aware Reinforcement Learning for Merging in Dense Traffic," submitted to *IEEE Conference on Intelligent Transportation Systems (ITSC)*, 2019.
+M. Bouton, A. Nakhaei, K. Fujimura, M. J. Kochenderfer, "Cooperation-Aware Reinforcement Learning for Merging in Dense Traffic," in *IEEE Conference on Intelligent Transportation Systems (ITSC)*, 2019. [ArXiv](https://arxiv.org/abs/1906.11021)
 
 <img src="demo.gif" width="700"/>
 
