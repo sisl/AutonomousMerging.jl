@@ -43,7 +43,7 @@ end
     srec = convert_s(AugScene, svec, mdp)
     @test get_by_id(srec.scene, EGO_ID).state.posG ≈ get_by_id(s.scene, EGO_ID).state.posG
     
-    s = hist.state_hist[end]
+    s = state_hist(hist)[end]
     svec = convert_s(Vector{Float64}, s, mdp)
     srec = convert_s(AugScene, svec, mdp)
     @test get_by_id(srec.scene, EGO_ID).state.posG ≈ get_by_id(s.scene, EGO_ID).state.posG

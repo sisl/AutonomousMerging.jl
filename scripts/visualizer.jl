@@ -4,12 +4,12 @@ using Interact
 
 model = deepcopy(mdp.driver_models[2])
 ui = @manipulate for step in 1:n_steps(hist)+1
-    s = hist.state_hist[step]
+    s = state_hist(hist)[step]
     # b = hist.belief_hist[step]
     b = nothing
     acc = s.ego_info.acc
     if step < n_steps(hist)+1
-        a = hist.action_hist[step]
+        a = collect(action_hist(hist))[step]
         act = action_map(mdp, acc, a).a
     else
         a = -1

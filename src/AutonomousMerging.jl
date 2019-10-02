@@ -11,7 +11,6 @@ using StaticArrays
 using GridInterpolations
 using AutomotiveDrivingModels
 using AutoViz
-using AutomotivePOMDPs
 
 const EGO_ID = 1
 

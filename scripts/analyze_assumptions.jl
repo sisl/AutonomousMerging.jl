@@ -101,8 +101,8 @@ hist = simulate(hr, mdp, policy, s0)
 
 w3 = Window()
 ui = @manipulate for step in 1:n_steps(hist)
-    s = hist.state_hist[step]
-    a = hist.action_hist[step]
+    s = state_hist(hist)[step]
+    a = action_hist(hist)[step]
     v = MergingViz(mdp=mdp, s=s, a=a, action_values = actionvalues(policy, s))
     AutoViz.render([v], cam=StaticCamera(VecE2(0.0, 0.0), 20.0))
 end

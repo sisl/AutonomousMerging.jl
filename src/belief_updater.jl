@@ -1,7 +1,7 @@
 function POMDPs.transition(mdp::GenerativeMergingMDP, s::AugScene, a::Int64)
     # Pr(sp |s, a)
     rng = MersenneTwister(1)
-    spred = generate_s(mdp, s, a, rng)
+    spred = gen(DDNOut(:sp), mdp, s, a, rng)
     s_vec = extract_features(mdp, spred)
     sig_p = diagm(0 => [1.0 for i=1:length(s_vec)])
     return  d = MultivariateNormal(s_vec, sig_p)

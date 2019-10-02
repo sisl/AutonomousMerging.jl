@@ -124,3 +124,7 @@ function findfirst_lane(scene::Scene, lane::Lane)
     end
     return vehmin, vehind
 end
+
+function get_end(lane::Lane)
+    return lane.curve[end].s
+end

@@ -35,7 +35,7 @@ function generate_trajectory(mdp::GenerativeMergingMDP, policy::Policy, max_step
         X[i] = zeros(length(svec))
     end
     fill!(X, zeros(length(svec)))
-    X[1:n_steps(hist)+1] = convert_s.(Ref(Vector{Float64}), hist.state_hist, Ref(mdp))
+    X[1:n_steps(hist)+1] = convert_s.(Ref(Vector{Float64}), state_hist(hist), Ref(mdp))
     # build labels
     Y = Vector{Vector{Float64}}(undef, max_steps + 1) 
     for (i,x) in enumerate(X)

@@ -44,7 +44,7 @@ function collision_lookahead(mdp::GenerativeMergingMDP, s::AugScene)
         sp = deepcopy(s.scene)
         acc = action_map(mdp, s.ego_info.acc, a)
         tick!(sp, mdp.env.roadway, [acc, action_list...], mdp.dt)
-        if !is_crash(sp)
+        if !icollision_checker(sp, EGO_ID)
             push!(valid_acts, a)
         end
     end

@@ -74,7 +74,7 @@ make_gif(hist, mdp)
 include("visualizer.jl");
 
 i = 36
-s = hist.state_hist[i]
+s = state_hist(hist)[i]
 c = AutoViz.render(s.scene, mdp.env.roadway, cam = StaticCamera(VecE2(-15.0, -10.0), 16.0),
                 MergingNeighborsOverlay(target_id=EGO_ID, env=mdp.env)
                 car_colors=get_car_type_colors(s0.scene, mdp.driver_models),
@@ -83,7 +83,7 @@ c = AutoViz.render(s.scene, mdp.env.roadway, cam = StaticCamera(VecE2(-15.0, -10
 write_to_png(c, "snap-bis$i.png")
 
 i = 36
-hist.action_hist[i], hist.state_hist[i].ego_info.acc, get_by_id(hist.state_hist[i].scene, 1).state.v
+collect(action_hist(hist))[i], state_hist(hist)[i].ego_info.acc, get_by_id(state_hist(hist)[i].scene, 1).state.v
 
 make_gif(hist, mdp)
 
@@ -140,8 +140,8 @@ include("visualizer.jl");
 
 frames = Frames(MIME("image/png"), fps=4);
 for step in 1:n_steps(hist)
-    s = hist.state_hist[step+1]
-    a = hist.action_hist[step]
+    s = state_hist(hist)[step+1]
+    a = collect(action_hist(hist))[step]
     f = AutoViz.render(s.scene, mdp.env.roadway, 
           SceneOverlay[
                        IDOverlay(),

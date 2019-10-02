@@ -88,8 +88,8 @@ w = Window()
 hr = HistoryRecorder(rng = rng, max_steps=200)
 hist = simulate(hr, mdp, policy, s0)
 ui = @manipulate for step in 1:n_steps(hist)
-    s = hist.state_hist[step]
-    a = hist.action_hist[step]
+    s = state_hist(hist)[step]
+    a = collect(action_hist(hist))[step]
     v = MergingViz(mdp=mdp, s=s, a=a, action_values = actionvalues(policy, s))
     AutoViz.render([v], cam=StaticCamera(VecE2(0.0, 0.0), 15.0))
 end
@@ -154,7 +154,7 @@ write("out.gif", frames)
 
 hist = simulate(hr, mdp, policy, s0)
 
-AutoViz.render([mdp.env.roadway, hist.state_hist[end]], cam = SceneFollowCamera())
+AutoViz.render([mdp.env.roadway, state_hist(hist)[end]], cam = SceneFollowCamera())
 
 undiscounted_reward(hist)
 
@@ -165,7 +165,7 @@ isterminal(mdp, sf)
 
 hist.reward_hist[end]
 
-isterminal(mdp, hist.state_hist[end])
+isterminal(mdp, state_hist(hist)[end])
 
 frames = Frames(MIME("image/png"), fps=8)
 # AutoViz.render([mdp.env.roadway, s0], cam = SceneFollowCamera())
@@ -214,7 +214,7 @@ rm("reward.jld2")
 # end
 # write("out.gif", frames)
 
-# AutoViz.render([mdp.env.roadway, hist.state_hist[2]], cam=SceneFollowCamera())
+# AutoViz.render([mdp.env.roadway, state_hist(hist)[2]], cam=SceneFollowCamera())
 # Reel.set_output_type("gif")
 # 
 # s = initialstate(mdp, rng)
@@ -335,10 +335,10 @@ rm("reward.jld2")
 # end
 # write("out.gif", frames)
 
-# AutoViz.render([mdp.env.roadway, hist.state_hist[end-1]], cam=SceneFollowCamera())
+# AutoViz.render([mdp.env.roadway, state_hist(hist)[end-1]], cam=SceneFollowCamera())
 
 
-# @show actionvalues(policy, hist.state_hist[end-1])
+# @show actionvalues(policy, state_hist(hist)[end-1])
 
 
 # ## Evaluate policy 

@@ -42,7 +42,7 @@ hist = simulate(hr, mdp, policy, s0)
 
 include("visualizer.jl");
 
-s = hist.state_hist[end-5]
+s = state_hist(hist)[end-5]
 s = s0
 AutoViz.render(s.scene, mdp.env.roadway, 
           SceneOverlay[IDOverlay(),
@@ -81,7 +81,7 @@ hr = HistoryRecorder(rng = rng, max_steps=100)
 
 
 
-scene = hist.state_hist[2].scene
+scene = state_hist(hist)[2].scene
 get_neighbor_rear_along_left_lane(scene, 1, mdp.env.roadway, VehicleTargetPointRear(), VehicleTargetPointFront(), VehicleTargetPointRear())
 
 AutoViz.render(s0.scene, mdp.env.roadway, cam=FitToContentCamera(0.0))
@@ -93,8 +93,8 @@ s = sp
 w = Window()
 
 ui = @manipulate for step in 1:n_steps(hist)
-    s = hist.state_hist[step+1]
-    a = hist.action_hist[step]
+    s = state_hist(hist)[step+1]
+    a = collect(action_hist(hist))[step]
     AutoViz.render(s.scene, mdp.env.roadway, 
           SceneOverlay[IDOverlay()],
           cam=FitToContentCamera(0.0), 
@@ -151,8 +151,8 @@ hist = simulate(hr, mdp, policy, s0)
 
 frames = Frames(MIME("image/png"), fps=4)
 for step in 1:n_steps(hist)
-    s = hist.state_hist[step+1]
-    a = hist.action_hist[step]
+    s = state_hist(hist)[step+1]
+    a = collect(action_hist(hist))[step]
     f = AutoViz.render(s, mdp.env.roadway, 
           SceneOverlay[IDOverlay()],
           cam=FitToContentCamera(0.0), 
@@ -180,8 +180,8 @@ hr = HistoryRecorder(rng = rng, max_steps=100)
 hist = simulate(hr, mdp, policy, s0)
 undiscounted_reward(hist)
 ui = @manipulate for step in 1:n_steps(hist)
-    s = hist.state_hist[step+1]
-    a = hist.action_hist[step]
+    s = state_hist(hist)[step+1]
+    a = collect(action_hist(hist))[step]
     AutoViz.render(s, mdp.env.roadway, 
           SceneOverlay[IDOverlay()],
           cam=FitToContentCamera(0.0), 

@@ -5,11 +5,11 @@ function make_gif(hist, mdp, belief_hist=nothing)
         # if belief
         #     b = hist.belief_hist[step +1]
         # end
-        s = hist.state_hist[step]
-        # a = hist.action_hist[step]
+        s = state_hist(hist)[step]
+        # a = collect(action_hist(hist))[step]
         # acc = s.ego_info.acc
         if step < n_steps(hist)+1
-            # a = hist.action_hist[step]
+            # a = collect(action_hist(hist))[step]
             # act = action_map(mdp, acc, a).a
         else
             a = -1

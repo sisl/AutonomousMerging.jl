@@ -13,6 +13,14 @@ struct AugScene
     ego_info::NamedTuple{(:acc,), Tuple{Float64}}
 end
 
+# Dummy type since the action is given by the policy
+mutable struct EgoDriver{A} <: DriverModel{A}
+    a::A
+end
+
+Base.rand(model::EgoDriver) = model.a
+AutomotiveDrivingModels.observe!(m::EgoDriver, s::EntityFrame{S,D,I}, roadway::R, egoid::Int64) where {S,D,I,R} = m
+
 """
     GenerativeMergingMDP
 
@@ -151,7 +159,7 @@ function POMDPs.reward(mdp::GenerativeMergingMDP, s::AugScene, a::Int64, sp::Aug
     r = 0.0
     if reachgoal(mdp, egop)
        r += mdp.goal_reward    
-    elseif is_crash(sp.scene)
+    elseif collision_checker(sp.scene, EGO_ID)
         r += mdp.collision_cost
     end
     if caused_hard_brake(mdp, sp.scene)
@@ -165,10 +173,10 @@ function POMDPs.reward(pomdp::FullyObservablePOMDP{AugScene,Int64}, s::AugScene,
 end
 
 function POMDPs.isterminal(mdp::GenerativeMergingMDP, s::AugScene)
-    return is_crash(s.scene) || reachgoal(mdp, get_by_id(s.scene, EGO_ID))
+    return collision_checker(s.scene, EGO_ID) || reachgoal(mdp, get_by_id(s.scene, EGO_ID))
 end
 
-function POMDPs.generate_s(mdp::GenerativeMergingMDP, s::AugScene, a::Int64, rng::AbstractRNG)
+function POMDPs.gen(mdp::GenerativeMergingMDP, s::AugScene, a::Int64, rng::AbstractRNG)
     scene = deepcopy(s.scene)
     mdp.driver_models[EGO_ID].a = action_map(mdp, s.ego_info.acc, a)
     ego_acc = mdp.driver_models[EGO_ID].a.a
@@ -189,7 +197,7 @@ function POMDPs.generate_s(mdp::GenerativeMergingMDP, s::AugScene, a::Int64, rng
         scene[i] = wrap_around(mdp.env, scene[i]) 
     end
 
-    return AugScene(scene, (acc=ego_acc,))
+    return (sp=AugScene(scene, (acc=ego_acc,)), )
 end
 
 """ 
