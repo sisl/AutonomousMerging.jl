@@ -20,7 +20,7 @@ using Pkg
 Pkg.add("POMDPs")
 using POMDPs
 POMDPs.add_registry() 
-Pkg.Registry.add("https://github.com/sisl/Registry")
+Pkg.Registry.add(RegistrySpec(url="https://github.com/sisl/Registry"))
 Pkg.add("AutonomousMerging")
 ```
 
