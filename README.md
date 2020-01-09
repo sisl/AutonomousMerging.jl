@@ -14,14 +14,16 @@ M. Bouton, A. Nakhaei, K. Fujimura, M. J. Kochenderfer, "Cooperation-Aware Reinf
 
 ## Installation
 
-To install this julia package, add the sisl registry:
+To install this julia package, add the JuliaPOMDP registry and the sisl registry:
 ```julia
-] registry add https://github.com/sisl/Registry
+using Pkg 
+Pkg.add("POMDPs")
+using POMDPs
+POMDPs.add_registry() 
+Pkg.Registry.add(RegistrySpec(url="https://github.com/sisl/Registry"))
+Pkg.add("AutonomousMerging")
 ```
-Then add this package using its url:
-```julia
-] add https://github.com/sisl/AutonomousMerging.jl
-```
+
 
 ## Folder structure
 
