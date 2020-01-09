@@ -2,7 +2,7 @@ function super_render(mdp, s, b=nothing)
     # model = deepcopy(mdp.driver_models[2])
     overlays = SceneOverlay[
                         # IDOverlay(color=colorant"white",font_size=20),
-                        MergingNeighborsOverlay(target_id=EGO_ID, env=mdp.env),
+                        # MergingNeighborsOverlay(target_id=EGO_ID, env=mdp.env),
                         # DistToMergeOverlay(target_id=EGO_ID, env=mdp.env),
                         # DistToMergeOverlay(target_id=10, env=mdp.env),
                         #    DistToMergeOverlay(target_id=3, env=mdp.env),
@@ -26,7 +26,7 @@ function super_render(mdp, s, b=nothing)
             # cam = CarFollowCamera(1, 5.0),
             # cam = FitToContentCamera(0.0),
             # cam = StaticCamera(VecE2(-25.0, -10.0), 6.0),
-            cam = StaticCamera(VecE2(-25.0, -10.0), 6.0),
+            cam = StaticCamera(VecE2(-25.0, -10.0), 15.0),
             #   car_colors = Dict{Int64, Colorant}(1 => COLOR_CAR_EGO)
             car_colors=get_car_type_colors(s.scene, mdp.driver_models)
             )

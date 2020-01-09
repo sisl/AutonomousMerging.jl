@@ -20,28 +20,28 @@ function AutoViz.render!(rendermodel::RenderModel, overlay::MergingNeighborsOver
         A = get_front(veh_ego)
         B = get_rear(veh_oth)
         add_instruction!(rendermodel, render_line_segment, (A.x, A.y, B.x, B.y, overlay.color_fore, overlay.line_width))
-        drawtext(@sprintf("d fore:   %10.3f", fore.Δs), yₒ + 0*Δy, rendermodel, textparams)
+        # drawtext(@sprintf("d fore:   %10.3f", fore.Δs), yₒ + 0*Δy, rendermodel, textparams)
     end
     if fore_main.ind != nothing 
         veh_oth = scene[fore_main.ind]
         A = get_front(veh_ego)
         B = get_rear(veh_oth)
         add_instruction!(rendermodel, render_line_segment, (A.x, A.y, B.x, B.y, overlay.color_main, overlay.line_width))
-        drawtext(@sprintf("d fore main: %10.3f", fore_main.Δs), yₒ + 1*Δy, rendermodel, textparams)
+        # drawtext(@sprintf("d fore main: %10.3f", fore_main.Δs), yₒ + 1*Δy, rendermodel, textparams)
     end
     if rear_main.ind != nothing 
         veh_oth = scene[rear_main.ind]
         A = get_front(veh_ego)
         B = get_rear(veh_oth)
         add_instruction!(rendermodel, render_line_segment, (A.x, A.y, B.x, B.y, overlay.color_main, overlay.line_width))
-        drawtext(@sprintf("d rear main:  %10.3f", rear_main.Δs), yₒ + 2*Δy, rendermodel, textparams)
+        # drawtext(@sprintf("d rear main:  %10.3f", rear_main.Δs), yₒ + 2*Δy, rendermodel, textparams)
     end 
     if merge.ind != nothing 
         veh_oth = scene[merge.ind]
         A = get_front(veh_ego)
         B = get_rear(veh_oth)
         add_instruction!(rendermodel, render_line_segment, (A.x, A.y, B.x, B.y, overlay.color_main, overlay.line_width))
-        drawtext(@sprintf("d merge:  %10.3f", merge.Δs), yₒ + 3*Δy, rendermodel, textparams)
+        # drawtext(@sprintf("d merge:  %10.3f", merge.Δs), yₒ + 3*Δy, rendermodel, textparams)
     end 
 end
 
@@ -142,16 +142,21 @@ function get_car_type_colors(scene::Scene, models::Dict{Int64, DriverModel};
     color_dict = Dict{Int64, Colorant}()
     for veh in scene
         if veh.id == 1
-            color_dict[1] = COLOR_CAR_EGO
-        elseif models[veh.id].c == 1 && models[veh.id].idm.v_des < 15.0
-            color_dict[veh.id] = cooperative #cooperative_slow
-        elseif models[veh.id].c == 0 && models[veh.id].idm.v_des < 15.0
-            color_dict[veh.id] = aggressive # aggressive_slow
-        elseif models[veh.id].c == 1
-            color_dict[veh.id] = cooperative
-        elseif models[veh.id].c == 0
-            color_dict[veh.id] = aggressive
+            color_dict[1] = AutoViz._colortheme["COLOR_CAR_EGO"]
+        else 
+            color = weighted_color_mean(1 - models[veh.id].c, colorant"red", colorant"green")
+            # color_dict[veh.id] = RGB(HSV(0, 1.0 - models[veh.id].c, 1.0))
+            color_dict[veh.id] = color
+        # elseif models[veh.id].c == 1 && models[veh.id].idm.v_des < 15.0
+        #     color_dict[veh.id] = cooperative #cooperative_slow
+        # elseif models[veh.id].c == 0 && models[veh.id].idm.v_des < 15.0
+        #     color_dict[veh.id] = aggressive # aggressive_slow
+        # elseif models[veh.id].c == 1
+        #     color_dict[veh.id] = cooperative
+        # elseif models[veh.id].c == 0
+        #     color_dict[veh.id] = aggressive
         end
+        
     end   
     return color_dict
 end

@@ -47,7 +47,7 @@ A simulation environment for a highway merging scenario. Implemented using POMDP
     - `observe_speed::Bool = true`
     - `traffic_speed::Symbol = :mixed`
     - `random_n_cars::Bool = false`
-    - `driver_type::Symbol = :random`
+    - `driver_type::Symbol = :random` can be :binary, or :aggressive, or :cooperative
     - `max_burn_in::Int64 = 20`
     - `min_burn_in::Int64 = 10`
     - `initial_ego_velocity::Float64 = 10.0`
@@ -128,7 +128,9 @@ function POMDPs.initialstate(mdp::GenerativeMergingMDP, rng::AbstractRNG)
         end
         set_desired_speed!(mdp.driver_models[i], v_des)
         if mdp.driver_type == :random
-            mdp.driver_models[i].c = rand(rng, [0,1]) # change cooperativity
+            mdp.driver_models[i].c = rand(rng, 0:0.01:1) # change cooperativity
+        elseif mdp.driver_type == :binary 
+            mdp.driver_models[i].c = sample(rng, [0,1], Weights([0.9, 0.1])) # change cooperativity
         elseif mdp.driver_type == :aggressive
             mdp.driver_models[i].c = 0.0
         elseif mdp.driver_type == :cooperative
