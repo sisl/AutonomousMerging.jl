@@ -8,14 +8,17 @@ using DeepQLearning
 using Flux
 using BSON
 using Reel
+using RLInterface
+using AutoViz
+AutoViz.set_color_theme(OFFICETHEME)
 include("scripts/make_gif.jl")
 
 rng = MersenneTwister(1)
 
-mdp = GenerativeMergingMDP(random_n_cars=true, min_cars=10,max_cars=14, traffic_speed = :mixed, driver_type=:random, 
-                           observe_cooperation=false)
+mdp = GenerativeMergingMDP(random_n_cars=true, min_cars=16,max_cars=16, traffic_speed = :mixed, driver_type=:binary, initial_ego_velocity=5.0,
+                           observe_cooperation=true);
 for i=2:mdp.max_cars+1
-    mdp.driver_models[i] = CooperativeIDM()
+    mdp.driver_models[i] = CooperativeIDM();
 end
 # pomdp = FullyObservablePOMDP(mdp)
 # up = MergingUpdater(mdp)
@@ -29,33 +32,32 @@ input_dims = length(svec)
 
 model = Chain(Dense(input_dims, 64, relu), Dense(64, 32, relu), Dense(32, n_actions(mdp)))
 # do not run if you just want to load a policy
-solver = DeepQLearningSolver(qnetwork = model, 
-                      max_steps = 1_000_000,
-                      eps_fraction = 0.5,
-                      eps_end = 0.01,
-                      eval_freq = 10_000,
-                      save_freq = 10_000,
-                      target_update_freq = 5000,
-                      batch_size = 32, 
-                      learning_rate = 1e-4,
-                      train_start = 10000,
-                      log_freq = 1000,
-                      num_ep_eval = 1000,
-                      double_q = true,
-                      dueling = false,
-                      prioritized_replay = true,
-                      verbose = true, 
-                      rng = rng)
+# solver = DeepQLearningSolver(qnetwork = model, 
+#                       max_steps = 1_000_000,
+#                       eps_fraction = 0.5,
+#                       eps_end = 0.01,
+#                       eval_freq = 10_000,
+#                       save_freq = 10_000,
+#                       target_update_freq = 5000,
+#                       batch_size = 32, 
+#                       learning_rate = 1e-4,
+#                       train_start = 10000,
+#                       log_freq = 1000,
+#                       num_ep_eval = 1000,
+#                       double_q = true,
+#                       dueling = false,
+#                       prioritized_replay = true,
+#                       verbose = true, 
+#                       rng = rng)
 
-policy = solve(solver, mdp)
+# policy = solve(solver, mdp)
 
-BSON.@save "policy_true.bson" policy
+# BSON.@save "policy_true.bson" policy
 
-
-BSON.@load joinpath(solver.logdir,"policy_true.bson") policy
-BSON.@load "log13/qnetwork.bson" qnetwork
+# BSON.@load joinpath(solver.logdir,"policy_true.bson") policy
+BSON.@load "log15/qnetwork.bson" qnetwork
 Flux.loadparams!(model, qnetwork)
-policy = NNPolicy(mdp, model, collect(actions(mdp)), 1)
+policy = NNPolicy(mdp, model, collect(actions(mdp)), 1);
 
 env = MDPEnvironment(mdp)
 DeepQLearning.evaluation(solver.evaluation_policy, 
@@ -65,20 +67,25 @@ DeepQLearning.evaluation(solver.evaluation_policy,
                 solver.verbose)
 
 # policy = MaskedPolicy(policy)
-s0 = initialstate(mdp, rng);
-hr = HistoryRecorder(rng = rng, max_steps=100);
-hist = simulate(hr, mdp, policy, s0);
 
-make_gif(hist, mdp)
+for i=1:10
+    s0 = initialstate(mdp, rng);
+    hr = HistoryRecorder(rng = rng, max_steps=100);
+    hist = simulate(hr, mdp, policy, s0);
+    @show undiscounted_reward(hist)
+    if undiscounted_reward(hist) > 0.0
+        make_gif(hist, mdp, nothing, "out$i.gif")
+    end
+end
+
 
 include("visualizer.jl");
 
 i = 36
 s = state_hist(hist)[i]
-c = AutoViz.render(s.scene, mdp.env.roadway, cam = StaticCamera(VecE2(-15.0, -10.0), 16.0),
-                MergingNeighborsOverlay(target_id=EGO_ID, env=mdp.env)
-                car_colors=get_car_type_colors(s0.scene, mdp.driver_models),
-               canvas_height=400)
+c = AutoViz.render(s.scene, mdp.env.roadway,  cam = StaticCamera(VecE2(-25.0, -10.0), 10.0),
+                [MergingNeighborsOverlay(target_id=EGO_ID, env=mdp.env)],
+                car_colors=get_car_type_colors(s0.scene, mdp.driver_models))
 
 write_to_png(c, "snap-bis$i.png")
 
