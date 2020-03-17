@@ -18,6 +18,10 @@ Reel = "71555da5-176e-5e73-a222-aebc6c6e4f2f"
 StaticArrays = "90137ffa-7385-5640-81b9-e52037218182"
 StatsBase = "2913bbd2-ae8a-5f71-8c99-4fb6c76f3a91"
 
+[compat]
+AutoViz = "0.7"
+AutomotiveDrivingModels = "0.7.12"
+
 [extras]
 POMDPPolicies = "182e52fb-cfd0-5e46-8c26-fd0667c990f4"
 POMDPSimulators = "e0d0a172-29c6-5d4e-96d0-f262df5d01fd"

@@ -36,7 +36,7 @@ end
     policy = RandomPolicy(mdp, rng=rng)
     
     hr = HistoryRecorder(rng = rng, max_steps=100)
-    hist = simulate(hr, mdp, policy, s0)
+    hist = POMDPSimulators.simulate(hr, mdp, policy, s0)
 
     s = s0
     svec = convert_s(Vector{Float64}, s, mdp)
@@ -61,6 +61,6 @@ end
     s0 = test_state(mdp, 85.0)
     policy = FunctionPolicy(s->7)
     hr = HistoryRecorder(rng = rng, max_steps=40)
-    hist = simulate(hr, mdp, policy, s0)
+    hist = POMDPSimulators.simulate(hr, mdp, policy, s0)
 
 end
