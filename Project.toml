@@ -21,6 +21,7 @@ StatsBase = "2913bbd2-ae8a-5f71-8c99-4fb6c76f3a91"
 [compat]
 AutoViz = "0.7"
 AutomotiveDrivingModels = "0.7.12"
+DeepQLearning = "0.4"
 
 [extras]
 POMDPPolicies = "182e52fb-cfd0-5e46-8c26-fd0667c990f4"
