@@ -8,6 +8,7 @@ AutoViz = "82aa6e0c-a491-5edf-8d4b-c16b98e4ea17"
 AutomotiveDrivingModels = "99497e54-f3d6-53d3-a3a9-fa9315a7f1ba"
 AutomotivePOMDPs = "dca8afc0-c686-11e8-0934-712707da73aa"
 BeliefUpdaters = "8bb6e9a1-7d73-552c-a44a-e5dc5634aac4"
+DeepQLearning = "de0a67f4-c691-11e8-0034-5fc6e16e22d3"
 GridInterpolations = "bb4c363b-b914-514b-8517-4eb369bc008a"
 POMDPModelTools = "08074719-1b2a-587c-a292-00f91cc44415"
 POMDPs = "a93abf59-7444-517b-a68a-c42f96afdd7d"
@@ -21,7 +22,6 @@ StatsBase = "2913bbd2-ae8a-5f71-8c99-4fb6c76f3a91"
 [compat]
 AutoViz = "0.7"
 AutomotiveDrivingModels = "0.7.12"
-DeepQLearning = "0.4"
 
 [extras]
 POMDPPolicies = "182e52fb-cfd0-5e46-8c26-fd0667c990f4"
