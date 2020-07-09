@@ -11,6 +11,7 @@ julia:
 matrix:
   allow_failures:
     - julia: nightly
+    - os: windows
 addons:
  apt: # apt-get for linux
    packages:
