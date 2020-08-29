@@ -1,6 +1,3 @@
-using AutomotiveDrivingModels
-using Parameters
-
 const MAIN_LANE_ID = 1
 const MERGE_LANE_ID = 2
 

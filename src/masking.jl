@@ -57,7 +57,7 @@ function idm_limit_actions(mdp::GenerativeMergingMDP, s::AugScene)
     ego = scene[ego_ind]
     acc = s.ego_info.acc
     fore_res = get_front_neighbor(mdp.env, s.scene, EGO_ID)
-    if fore_res.ind == nothing 
+    if fore_res.ind === nothing 
         return actions(mdp)
     end
     v_ego = scene[ego_ind].state.v

@@ -6,7 +6,7 @@ using Distributions
 using StatsBase
 using StaticArrays
 using POMDPs
-using AutoViz
+using AutomotiveVisualization
 using AutomotiveDrivingModels
 using AutomotivePOMDPs
 using POMDPSimulators

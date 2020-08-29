@@ -8,8 +8,8 @@ const WRAP_AROUND_TOL = 2.0 # when vehicles reach the end of the main lane - WRA
     AugScene
 Driving scene augmented with information about the ego vehicle
 """
-struct AugScene
-    scene::Scene
+struct AugScene{E}
+    scene::Scene{E}
     ego_info::NamedTuple{(:acc,), Tuple{Float64}}
 end
 
@@ -18,8 +18,8 @@ mutable struct EgoDriver{A} <: DriverModel{A}
     a::A
 end
 
-Base.rand(model::EgoDriver) = model.a
-AutomotiveDrivingModels.observe!(m::EgoDriver, s::EntityFrame{S,D,I}, roadway::R, egoid::Int64) where {S,D,I,R} = m
+Base.rand(rng::AbstractRNG, model::EgoDriver) = model.a
+AutomotiveSimulator.observe!(m::EgoDriver, s::Scene, roadway::Roadway, egoid::Int64) = m
 
 """
     GenerativeMergingMDP
@@ -100,11 +100,10 @@ end
 
 POMDPs.discount(mdp::GenerativeMergingMDP) = mdp.discount_factor
 POMDPs.actions(mdp::GenerativeMergingMDP) = 1:7
-POMDPs.n_actions(mdp::GenerativeMergingMDP) = 7
 POMDPs.actionindex(mdp::GenerativeMergingMDP, a::Int64) = a
 
-function POMDPs.initialstate(mdp::GenerativeMergingMDP, rng::AbstractRNG)
-    s0 = Scene()
+function POMDPs.initialstate(mdp::GenerativeMergingMDP)
+    ImplicitDistribution() do rng
     if mdp.random_n_cars
         mdp.n_cars_main = rand(rng, mdp.min_cars:mdp.max_cars)
     end
@@ -114,46 +113,51 @@ function POMDPs.initialstate(mdp::GenerativeMergingMDP, rng::AbstractRNG)
     start_velocities = mdp.initial_velocity .+ mdp.initial_velocity_std*randn(rng, mdp.n_cars_main)
     ego = initial_merge_car_state(mdp, rng, EGO_ID)
     ego_acc_0 = 0.0
-    scene = s0
-    for i=EGO_ID+1:EGO_ID+mdp.n_cars_main
-        veh_state = vehicle_state(start_positions[i - EGO_ID], main_lane(mdp.env),
-        start_velocities[i - EGO_ID], mdp.env.roadway)
-        veh = Vehicle(veh_state, mdp.car_def, i)
-        push!(s0, veh)
-        mdp.driver_models[i] = CooperativeIDM()
+    scene = Scene(typeof(ego), mdp.n_cars_main + 1)
+    for i=1:mdp.n_cars_main
+        id = EGO_ID + i
+        veh_state = vehicle_state(start_positions[id - EGO_ID], main_lane(mdp.env),
+        start_velocities[id - EGO_ID], mdp.env.roadway)
+        veh = Entity(veh_state, mdp.car_def, id)
+        push!(scene, veh)
+        mdp.driver_models[id] = CooperativeIDM()
         if mdp.traffic_speed == :mixed
             v_des = sample(rng, [4.0, 5., 6.0], Weights([0.2, 0.3, 0.5]))
         elseif mdp.traffic_speed == :fast
             v_des = 15.0
         end
-        set_desired_speed!(mdp.driver_models[i], v_des)
+        set_desired_speed!(mdp.driver_models[id], v_des)
         if mdp.driver_type == :random
-            mdp.driver_models[i].c = rand(rng, 0:0.01:1) # change cooperativity
+            mdp.driver_models[id].c = rand(rng, 0:0.01:1) # change cooperativity
         elseif mdp.driver_type == :binary 
-            mdp.driver_models[i].c = sample(rng, [0,1], Weights([0.9, 0.1])) # change cooperativity
+            mdp.driver_models[id].c = sample(rng, [0,1], Weights([0.9, 0.1])) # change cooperativity
         elseif mdp.driver_type == :aggressive
-            mdp.driver_models[i].c = 0.0
+            mdp.driver_models[id].c = 0.0
         elseif mdp.driver_type == :cooperative
-            mdp.driver_models[i].c = 1.0
+            mdp.driver_models[id].c = 1.0
         end   
     end
     # burn in 
-    acts = Vector{LaneFollowingAccel}(undef, length(scene))
     burn_in =rand(rng, mdp.min_burn_in:mdp.max_burn_in)
-    scene = s0
+    next_scene = Scene(eltype(scene), length(scene))
     for t=1:burn_in
-        get_actions!(acts, scene, mdp.env.roadway, mdp.driver_models)
-        tick!(scene, mdp.env.roadway, acts, mdp.dt, true)
         for (i, veh) in enumerate(scene)
-            scene[i] = wrap_around(mdp.env, scene[i]) 
+
+            observe!(mdp.driver_models[veh.id], scene, mdp.env.roadway, veh.id)
+            a = rand(rng, mdp.driver_models[veh.id])
+
+            veh_state_p  = propagate(veh, a, mdp.env.roadway, mdp.dt, false)
+            entity = wrap_around(mdp.env, Entity(veh_state_p, veh.def, veh.id))
+            push!(next_scene, entity)
         end
+        copyto!(scene, next_scene)
+        empty!(next_scene)
+
     end
-    s = Scene()
-    push!(s, ego)
-    for veh in scene
-        push!(s, veh)
+    push!(scene, ego)
+
+    return AugScene(scene, (acc=ego_acc_0,))
     end
-    return AugScene(s, (acc=ego_acc_0,))
 end    
 
 function POMDPs.reward(mdp::GenerativeMergingMDP, s::AugScene, a::Int64, sp::AugScene)
@@ -179,27 +183,27 @@ function POMDPs.isterminal(mdp::GenerativeMergingMDP, s::AugScene)
 end
 
 function POMDPs.gen(mdp::GenerativeMergingMDP, s::AugScene, a::Int64, rng::AbstractRNG)
-    scene = deepcopy(s.scene)
+    scene = s.scene
+
+    # update driver models 
     mdp.driver_models[EGO_ID].a = action_map(mdp, s.ego_info.acc, a)
     ego_acc = mdp.driver_models[EGO_ID].a.a
-    acts = Vector{LaneFollowingAccel}(undef, length(scene))
-
-    # call driver models 
     for i=EGO_ID+1:EGO_ID+mdp.n_cars_main
         mdp.driver_models[i].other_acc = s.ego_info.acc
     end
-    get_actions!(acts, scene, mdp.env.roadway, mdp.driver_models)
 
-    # update scene 
-    tick!(scene, mdp.env.roadway, acts, mdp.dt, true)
+    # simulate one step
+    next_scene = Scene(eltype(scene), length(scene))
+    for veh in scene
+        observe!(mdp.driver_models[veh.id], scene, mdp.env.roadway, veh.id)
+        a = rand(rng, mdp.driver_models[veh.id])
 
-    # clamp speed 
-    for (i, veh) in enumerate(scene)
-        # scene[i] = clamp_speed(mdp.env, veh)
-        scene[i] = wrap_around(mdp.env, scene[i]) 
+        veh_state_p  = propagate(veh, a, mdp.env.roadway, mdp.dt, false)
+        entity = wrap_around(mdp.env, Entity(veh_state_p, veh.def, veh.id))
+        push!(next_scene, entity)
     end
 
-    return (sp=AugScene(scene, (acc=ego_acc,)), )
+    return (sp=AugScene(next_scene, (acc=ego_acc,)), )
 end
 
 """ 
@@ -226,7 +230,7 @@ function extract_features(mdp::GenerativeMergingMDP, s::AugScene)
 
     # front neighbor
     features[6] = 0.0
-    if fore.ind != nothing
+    if fore.ind !== nothing
         fore_id = scene[fore.ind].id
         v_oth = scene[fore.ind].state.v
         headway = fore.Δs
@@ -246,7 +250,7 @@ function extract_features(mdp::GenerativeMergingMDP, s::AugScene)
 
     # two closest cars in main lane
     features[9] = 0.0
-    if fore_main.ind != nothing 
+    if fore_main.ind !== nothing 
         fore_main_id = scene[fore_main.ind].id
         v_oth_main_fore = scene[fore_main.ind].state.v
         headway_main_fore = fore_main.Δs
@@ -263,7 +267,7 @@ function extract_features(mdp::GenerativeMergingMDP, s::AugScene)
         end
     end
     features[12] = 0.0
-    if rear_main.ind != nothing 
+    if rear_main.ind !== nothing 
         rear_main_id = scene[rear_main.ind].id
         v_oth_main_rear = scene[rear_main.ind].state.v
         headway_main_rear = rear_main.Δs
@@ -282,7 +286,7 @@ function extract_features(mdp::GenerativeMergingMDP, s::AugScene)
 
     # rear car to the merge point 
     features[15] = 0.0
-    if merge.ind != nothing
+    if merge.ind !== nothing
         merge_id = scene[merge.ind].id
         v_oth = scene[merge.ind].state.v
         headway = merge.Δs
@@ -369,7 +373,7 @@ function POMDPs.convert_s(::Type{AugScene}, o::V, mdp::GenerativeMergingMDP) whe
         lane_ego = main_lane(mdp.env)
         s_ego = mdp.env.roadway[mdp.env.merge_index].s + s_ego
     end
-    ego = Vehicle(vehicle_state(s_ego, lane_ego, v_ego, mdp.env.roadway), VehicleDef(), EGO_ID)
+    ego = Entity(vehicle_state(s_ego, lane_ego, v_ego, mdp.env.roadway), VehicleDef(), EGO_ID)
     push!(scene, ego)
 
     # front neighbor
@@ -378,7 +382,7 @@ function POMDPs.convert_s(::Type{AugScene}, o::V, mdp::GenerativeMergingMDP) whe
     else
         s_front = mdp.env.main_lane_length + s_front
     end
-    front = Vehicle(vehicle_state(s_front, main_lane(mdp.env), v_front, mdp.env.roadway), VehicleDef(), EGO_ID+1)
+    front = Entity(vehicle_state(s_front, main_lane(mdp.env), v_front, mdp.env.roadway), VehicleDef(), EGO_ID+1)
     push!(scene, front)
 
     # front neighbor to projection
@@ -386,11 +390,11 @@ function POMDPs.convert_s(::Type{AugScene}, o::V, mdp::GenerativeMergingMDP) whe
     main_lane_proj = proj(ego.state.posG, proj_lane, mdp.env.roadway)
     s_main = proj_lane[main_lane_proj.curveproj.ind, mdp.env.roadway].s
     s_fm = s_main + s_fm
-    frontmain = Vehicle(vehicle_state(s_fm, main_lane(mdp.env), v_fm, mdp.env.roadway), VehicleDef(), EGO_ID+2) 
+    frontmain = Entity(vehicle_state(s_fm, main_lane(mdp.env), v_fm, mdp.env.roadway), VehicleDef(), EGO_ID+2) 
     push!(scene, frontmain)
 
     s_rm = s_main - s_rm
-    rearmain = Vehicle(vehicle_state(s_rm, main_lane(mdp.env), v_rm, mdp.env.roadway), VehicleDef(), EGO_ID+3) 
+    rearmain = Entity(vehicle_state(s_rm, main_lane(mdp.env), v_rm, mdp.env.roadway), VehicleDef(), EGO_ID+3) 
     push!(scene, rearmain)
 
     if lane_ego == main_lane(mdp.env)
@@ -398,7 +402,7 @@ function POMDPs.convert_s(::Type{AugScene}, o::V, mdp::GenerativeMergingMDP) whe
     else
         s_m = mdp.env.main_lane_length - s_m 
     end
-    merge = Vehicle(vehicle_state(s_m, main_lane(mdp.env), v_m, mdp.env.roadway), VehicleDef(), EGO_ID+4) 
+    merge = Entity(vehicle_state(s_m, main_lane(mdp.env), v_m, mdp.env.roadway), VehicleDef(), EGO_ID+4) 
     push!(scene, merge)
     return AugScene(scene, (acc=a_ego,))
 end
@@ -408,30 +412,30 @@ end
 
 """
     initial_merge_car_state(mdp::GenerativeMergingMDP, rng::AbstractRNG, id::Int64)
-returns a Vehicle, at the initial state of the merging car.
+returns an Entity, at the initial state of the merging car.
 """
 function initial_merge_car_state(mdp::GenerativeMergingMDP, rng::AbstractRNG, id::Int64)
     v0 = mdp.initial_velocity + mdp.initial_velocity_std*randn(rng)
     v0 = mdp.initial_ego_velocity
     veh_state = vehicle_state(0.0, merge_lane(mdp.env), v0, mdp.env.roadway)
-    return Vehicle(veh_state, mdp.car_def, id)
+    return Entity(veh_state, mdp.car_def, id)
 end
 
 """
-    reset_main_car_state(mdp::GenerativeMergingMDP, veh::Vehicle)
+    reset_main_car_state(mdp::GenerativeMergingMDP, veh::Entity)
 initialize a car at the beginning of the main lane
 """
-function reset_main_car_state(mdp::GenerativeMergingMDP, veh::Vehicle)
+function reset_main_car_state(mdp::GenerativeMergingMDP, veh::Entity, rng::AbstractRNG)
     v0 = mdp.initial_velocity + mdp.initial_velocity_std*randn(rng)
     veh_state = vehicle_state(0.0, main_lane(mdp.env), v0, mdp.env.roadway)
-    return Vehicle(veh_state, mdp.car_def, veh.id)
+    return Entity(veh_state, mdp.car_def, veh.id)
 end
 
 """
-    reachgoal(mdp::GenerativeMergingMDP, ego::Vehicle)
+    reachgoal(mdp::GenerativeMergingMDP, ego::Entity)
 return true if `ego` reached the goal position
 """
-function reachgoal(mdp::GenerativeMergingMDP, ego::Vehicle)
+function reachgoal(mdp::GenerativeMergingMDP, ego::Entity)
     lane = get_lane(mdp.env.roadway, ego)
     s = ego.state.posF.s
     return lane.tag == main_lane(mdp.env).tag && s >= get_end(lane)
@@ -444,7 +448,7 @@ returns true if the ego vehicle caused its rear neighbor to hard brake
 function caused_hard_brake(mdp::GenerativeMergingMDP, scene::Scene)
     ego_ind = findfirst(EGO_ID, scene)
     fore_res = get_neighbor_rear_along_lane(scene, ego_ind, mdp.env.roadway)
-    if fore_res.ind == nothing 
+    if fore_res.ind === nothing 
         return false
     else
         return mdp.driver_models[fore_res.ind].a <= mdp.driver_models[fore_res.ind].idm.d_max
@@ -475,28 +479,13 @@ function vehicle_state(s::Float64, lane::Lane, v::Float64, roadway::Roadway)
 end
 
 """
-    wrap_around(env::MergingEnvironment, veh::Vehicle)
-respawn vehicle at the beginning of the main lane
-"""
-function wrap_around(env::MergingEnvironment, veh::Vehicle)
-    lane = get_lane(env.roadway, veh)
-    s_end = get_end(lane)
-    s = veh.state.posF.s
-    if s >= s_end - WRAP_AROUND_TOL && lane == main_lane(env) && veh.id != EGO_ID
-        veh_state = vehicle_state(0.0, main_lane(env), veh.state.v, env.roadway)
-        return Vehicle(veh_state,veh.def, veh.id)
-    end
-    return veh
-end
-
-"""
-    clamp_speed(env::MergingEnvironment, veh::Vehicle)
+    clamp_speed(env::MergingEnvironment, veh::Entity)
 clamp the speed of `veh` between 0. and main lane vmax
 """
-function clamp_speed(env::MergingEnvironment, veh::Vehicle)
+function clamp_speed(env::MergingEnvironment, veh::Entity)
     v = clamp(veh.state.v, 0.0, env.main_lane_vmax)
     vehstate = VehicleState(veh.state.posG, veh.state.posF, v)
-    return Vehicle(vehstate, veh.def, veh.id)
+    return Entity(vehstate, veh.def, veh.id)
 end
 
 """

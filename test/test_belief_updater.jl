@@ -7,7 +7,7 @@ using StatsBase
 using StaticArrays
 using POMDPs
 using BeliefUpdaters
-using AutoViz
+using AutomotiveVisualization
 using AutomotiveDrivingModels
 using AutomotivePOMDPs
 using POMDPSimulators
@@ -39,9 +39,9 @@ rng = MersenneTwister(1)
 
 
 function test_state(s,v=0.0, acc=0.0,)
-    ego = Vehicle(vehicle_state(35.0, merge_lane(mdp.env), 5.0, mdp.env.roadway), VehicleDef(), EGO_ID)
-    veh1 = Vehicle(vehicle_state(s, main_lane(mdp.env), 4.9, mdp.env.roadway), VehicleDef(), EGO_ID + 1)
-    veh2 = Vehicle(vehicle_state(s-15, main_lane(mdp.env), 4.9, mdp.env.roadway), VehicleDef(), EGO_ID + 2)
+    ego = Entity(vehicle_state(35.0, merge_lane(mdp.env), 5.0, mdp.env.roadway), VehicleDef(), EGO_ID)
+    veh1 = Entity(vehicle_state(s, main_lane(mdp.env), 4.9, mdp.env.roadway), VehicleDef(), EGO_ID + 1)
+    veh2 = Entity(vehicle_state(s-15, main_lane(mdp.env), 4.9, mdp.env.roadway), VehicleDef(), EGO_ID + 2)
     scene = Scene()
     push!(scene, ego)
     push!(scene, veh1)

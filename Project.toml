@@ -4,12 +4,12 @@ repo = "https://github.com/sisl/AutonomousMerging.jl"
 version = "0.1.0"
 
 [deps]
-AutoViz = "82aa6e0c-a491-5edf-8d4b-c16b98e4ea17"
-AutomotiveDrivingModels = "99497e54-f3d6-53d3-a3a9-fa9315a7f1ba"
-AutomotivePOMDPs = "dca8afc0-c686-11e8-0934-712707da73aa"
+AutomotiveSimulator = "6aa42d20-6c96-11ea-1103-339224409280"
+AutomotiveVisualization = "0faf7fd0-6c98-11ea-1740-03605baa3b07"
 BeliefUpdaters = "8bb6e9a1-7d73-552c-a44a-e5dc5634aac4"
-DeepQLearning = "de0a67f4-c691-11e8-0034-5fc6e16e22d3"
+Distributions = "31c24e10-a181-5473-b8eb-7969acd0382f"
 GridInterpolations = "bb4c363b-b914-514b-8517-4eb369bc008a"
+LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
 POMDPModelTools = "08074719-1b2a-587c-a292-00f91cc44415"
 POMDPs = "a93abf59-7444-517b-a68a-c42f96afdd7d"
 Parameters = "d96e819e-fc66-5662-9728-84c9c7592b0a"
@@ -18,10 +18,6 @@ Random = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"
 Reel = "71555da5-176e-5e73-a222-aebc6c6e4f2f"
 StaticArrays = "90137ffa-7385-5640-81b9-e52037218182"
 StatsBase = "2913bbd2-ae8a-5f71-8c99-4fb6c76f3a91"
-
-[compat]
-AutoViz = "0.7"
-AutomotiveDrivingModels = "0.7.12"
 
 [extras]
 POMDPPolicies = "182e52fb-cfd0-5e46-8c26-fd0667c990f4"

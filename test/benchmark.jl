@@ -12,7 +12,7 @@ using Parameters
 using GridInterpolations
 using StaticArrays
 using AutoUrban
-using AutoViz 
+using AutomotiveVisualization 
 using ProgressMeter
 using BenchmarkTools
 using Profile

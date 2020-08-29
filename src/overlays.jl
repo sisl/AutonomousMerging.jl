@@ -1,4 +1,5 @@
-@with_kw mutable struct MergingNeighborsOverlay <: SceneOverlay 
+@with_kw mutable struct MergingNeighborsOverlay
+    scene::Scene
     target_id::Int64 = 0 
     env::MergingEnvironment = MergingEnvironment()
     color_fore::Colorant = colorant"blue"
@@ -7,46 +8,47 @@
     textparams::TextParams = TextParams(y_start=20, size=20)
 end
 
-function AutoViz.render!(rendermodel::RenderModel, overlay::MergingNeighborsOverlay,
-                 scene::Scene, roadway::Roadway)
+function AutomotiveVisualization.add_renderable!(rendermodel::RenderModel, overlay::MergingNeighborsOverlay)
+    scene = overlay.scene
     textparams = overlay.textparams
     yₒ = textparams.y_start
     Δy = textparams.y_jump
     vehicle_index = findfirst(overlay.target_id, scene)
     veh_ego = scene[vehicle_index]
     fore, merge, fore_main, rear_main = get_neighbors(overlay.env, scene, overlay.target_id)
-    if fore.ind != nothing 
+    if fore.ind !== nothing 
         veh_oth = scene[fore.ind]
         A = get_front(veh_ego)
         B = get_rear(veh_oth)
         add_instruction!(rendermodel, render_line_segment, (A.x, A.y, B.x, B.y, overlay.color_fore, overlay.line_width))
-        # drawtext(@sprintf("d fore:   %10.3f", fore.Δs), yₒ + 0*Δy, rendermodel, textparams)
+        drawtext(@sprintf("d fore:   %10.3f", fore.Δs), yₒ + 0*Δy, rendermodel, textparams)
     end
-    if fore_main.ind != nothing 
+    if fore_main.ind !== nothing 
         veh_oth = scene[fore_main.ind]
         A = get_front(veh_ego)
         B = get_rear(veh_oth)
         add_instruction!(rendermodel, render_line_segment, (A.x, A.y, B.x, B.y, overlay.color_main, overlay.line_width))
-        # drawtext(@sprintf("d fore main: %10.3f", fore_main.Δs), yₒ + 1*Δy, rendermodel, textparams)
+        drawtext(@sprintf("d fore main: %10.3f", fore_main.Δs), yₒ + 1*Δy, rendermodel, textparams)
     end
-    if rear_main.ind != nothing 
+    if rear_main.ind !== nothing 
         veh_oth = scene[rear_main.ind]
         A = get_front(veh_ego)
         B = get_rear(veh_oth)
         add_instruction!(rendermodel, render_line_segment, (A.x, A.y, B.x, B.y, overlay.color_main, overlay.line_width))
-        # drawtext(@sprintf("d rear main:  %10.3f", rear_main.Δs), yₒ + 2*Δy, rendermodel, textparams)
+        drawtext(@sprintf("d rear main:  %10.3f", rear_main.Δs), yₒ + 2*Δy, rendermodel, textparams)
     end 
-    if merge.ind != nothing 
+    if merge.ind !== nothing 
         veh_oth = scene[merge.ind]
         A = get_front(veh_ego)
         B = get_rear(veh_oth)
         add_instruction!(rendermodel, render_line_segment, (A.x, A.y, B.x, B.y, overlay.color_main, overlay.line_width))
-        # drawtext(@sprintf("d merge:  %10.3f", merge.Δs), yₒ + 3*Δy, rendermodel, textparams)
+        drawtext(@sprintf("d merge:  %10.3f", merge.Δs), yₒ + 3*Δy, rendermodel, textparams)
     end 
 end
 
 
-@with_kw mutable struct DistToMergeOverlay <: SceneOverlay
+@with_kw mutable struct DistToMergeOverlay
+    scene::Scene
     target_id::Int64 = 0 
     env::MergingEnvironment = MergingEnvironment()
     color_point::Colorant = colorant"red"
@@ -56,19 +58,19 @@ end
     textparams::TextParams = TextParams(y_start=50)
 end
 
-function AutoViz.render!(rendermodel::RenderModel, overlay::DistToMergeOverlay,
-                 scene::Scene, roadway::Roadway)
+function AutomotiveVisualization.add_renderable!(rendermodel::RenderModel, overlay::DistToMergeOverlay)
+    scene = overlay.scene
     # display merge point 
     mp = overlay.env.merge_point
     add_instruction!(rendermodel, render_circle, (mp.x, mp.y, overlay.point_radius, overlay.color_point))
     
     # display line to merge point + info
     vehind = findfirst(overlay.target_id, scene)
-    if vehind != nothing 
+    if vehind !== nothing 
         veh = scene[vehind]
         # plot line
         A = get_front(veh)
-        # add_instruction!(rendermodel, render_dashed_line, ([A.x mp.x; A.y mp.y], overlay.color_line, overlay.line_width))
+        add_instruction!(rendermodel, render_dashed_line, ([A.x mp.x; A.y mp.y], overlay.color_line, overlay.line_width))
         dm = dist_to_merge(overlay.env, veh)
         ttm = time_to_merge(overlay.env, veh)
         disp_point = A + VecSE2(-10.0, 10.0, 0.0)
@@ -80,19 +82,18 @@ function AutoViz.render!(rendermodel::RenderModel, overlay::DistToMergeOverlay,
                                          @sprintf("ttm=%2.2f s", ttm)], 
                                    pos=disp_point,
                                    line_spacing = 0.15,
-                                   font_size = 20,
-                                   incameraframe=true)
-        # render!(rendermodel, text_overlay, scene, roadway)
+                                   font_size = 20)
+        add_renderable!(rendermodel, text_overlay)
     end
 end
 
-@with_kw mutable struct MaskingOverlay <: SceneOverlay
+@with_kw mutable struct MaskingOverlay
     mdp::GenerativeMergingMDP = GenerativeMergingMDP()
     acc::Float64 = 0.0 # current acceleration 
     textparams::TextParams = TextParams(size=20, x = 300, y_start=110)
 end
 
-function AutoViz.render!(rendermodel::RenderModel, overlay::MaskingOverlay,
+function AutomotiveVisualization.add_renderable!(rendermodel::RenderModel, overlay::MaskingOverlay,
                  scene::Scene, roadway::Roadway)
         ss = AugScene(scene, (acc=overlay.acc,))
         acts = safe_actions(overlay.mdp, ss)
@@ -102,14 +103,17 @@ function AutoViz.render!(rendermodel::RenderModel, overlay::MaskingOverlay,
 
 end
         
-@with_kw mutable struct CooperativeIDMOverlay <: SceneOverlay
+@with_kw mutable struct CooperativeIDMOverlay
+    scene::Scene 
+    roadway::Roadway
     model::CooperativeIDM = CooperativeIDM()
     targetid::Int64 = 0
     textparams::TextParams = TextParams(size = 20, x = 700, y_start=30)
 end
 
-function AutoViz.render!(rendermodel::RenderModel, overlay::CooperativeIDMOverlay,
-    scene::Scene, roadway::Roadway)
+function AutomotiveVisualization.add_renderable!(rendermodel::RenderModel, overlay::CooperativeIDMOverlay)
+    scene = overlay.scene 
+    roadway = overlay.roadway
     observe!(overlay.model, scene, roadway, overlay.targetid)
     veh = get_by_id(scene, overlay.targetid)
     mergeveh = get_by_id(scene, EGO_ID)
@@ -142,7 +146,7 @@ function get_car_type_colors(scene::Scene, models::Dict{Int64, DriverModel};
     color_dict = Dict{Int64, Colorant}()
     for veh in scene
         if veh.id == 1
-            color_dict[1] = AutoViz._colortheme["COLOR_CAR_EGO"]
+            color_dict[1] = AutomotiveVisualization.colortheme["COLOR_CAR_EGO"]
         else 
             color = weighted_color_mean(1 - models[veh.id].c, colorant"red", colorant"green")
             # color_dict[veh.id] = RGB(HSV(0, 1.0 - models[veh.id].c, 1.0))
@@ -161,15 +165,19 @@ function get_car_type_colors(scene::Scene, models::Dict{Int64, DriverModel};
     return color_dict
 end
 
-struct BeliefOverlay <: SceneOverlay
+struct BeliefOverlay
+    scene::Scene 
+    roadway::Roadway
     b::MergingBelief
 end
 
-function AutoViz.render!(rendermodel::RenderModel, overlay::BeliefOverlay,
+function AutomotiveVisualization.add_renderable!(rendermodel::RenderModel, overlay::BeliefOverlay,
                         scene::Scene, roadway::Roadway)
+    scene = overlay.scene 
+    roadway = oerlay.roadway
     for (vehid,prob) in overlay.b.driver_types 
         vehind = findfirst(vehid, scene)
-        if vehind != nothing 
+        if vehind !== nothing 
             render_proba!(rendermodel, scene, roadway, vehind, prob)
         end
     end

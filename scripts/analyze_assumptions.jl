@@ -14,7 +14,7 @@ using Parameters
 using GridInterpolations
 using StaticArrays
 using AutoUrban
-using AutoViz 
+using AutomotiveVisualization 
 using Printf
 using Reel
 using DiscreteValueIteration
@@ -104,6 +104,6 @@ ui = @manipulate for step in 1:n_steps(hist)
     s = state_hist(hist)[step]
     a = action_hist(hist)[step]
     v = MergingViz(mdp=mdp, s=s, a=a, action_values = actionvalues(policy, s))
-    AutoViz.render([v], cam=StaticCamera(VecE2(0.0, 0.0), 20.0))
+    AutomotiveVisualization.render([v], cam=StaticCamera(VecE2(0.0, 0.0), 20.0))
 end
 body!(w3, ui)

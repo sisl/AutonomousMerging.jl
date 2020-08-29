@@ -15,12 +15,12 @@ function make_gif(hist, mdp, belief_hist=nothing)
             a = -1
             act = NaN
         end
-        if belief_hist != nothing 
+        if belief_hist !== nothing 
             f = super_render(mdp, s, belief_hist[step])
         else
             f = super_render(mdp, s)
         end
-        # f = AutoViz.render(s.scene, mdp.env.roadway, 
+        # f = AutomotiveVisualization.render(s.scene, mdp.env.roadway, 
         #     SceneOverlay[
         #                 IDOverlay(),
         #                 MergingNeighborsOverlay(target_id=EGO_ID, env=mdp.env),

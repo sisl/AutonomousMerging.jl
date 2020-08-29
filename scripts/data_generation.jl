@@ -1,7 +1,7 @@
 using Revise
 using Random
 using AutomotiveDrivingModels
-using AutoViz
+using AutomotiveVisualization
 using AutomotivePOMDPs
 using AutomotiveSensors
 using POMDPs
@@ -147,7 +147,7 @@ state_hist = convert_s.(Ref(AugScene), X_train[1][1:endind], Ref(mdp))
 using Blink
 using Interact
 ui = @manipulate for s=1:length(state_hist)
-    AutoViz.render(state_hist[s].scene, mdp.env.roadway,  
+    AutomotiveVisualization.render(state_hist[s].scene, mdp.env.roadway,  
                    cam = StaticCamera(VecE2(-25.0, -10.0), 6.0))
 end
 
@@ -158,4 +158,4 @@ body!(w, ui);
 X_train[1][1]
 
 s0 = initialstate(mdp, rng)
-AutoViz.render(s0.scene, mdp.env.roadway, cam = StaticCamera(VecE2(-25.0, -10.0), 6.0))
+AutomotiveVisualization.render(s0.scene, mdp.env.roadway, cam = StaticCamera(VecE2(-25.0, -10.0), 6.0))

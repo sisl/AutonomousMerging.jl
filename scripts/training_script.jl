@@ -4,7 +4,7 @@ using StatsBase
 using StaticArrays
 using Distributions
 using POMDPs
-using AutoViz
+using AutomotiveVisualization
 using AutomotiveDrivingModels
 using AutomotivePOMDPs
 using POMDPSimulators
@@ -133,7 +133,7 @@ else
     model = Chain(Dense(input_dims, 64, relu), Dense(64, 32, relu), Dense(32, n_actions(mdp)))
 end
 
-if parsed_args["load"] != nothing
+if parsed_args["load"] !== nothing
     BSON.@load parsed_args["load"] policy
     Flux.loadparams!(model, Flux.params(policy.qnetwork))
 end

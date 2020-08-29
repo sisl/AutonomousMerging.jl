@@ -9,8 +9,8 @@ using Flux
 using BSON
 using Reel
 using RLInterface
-using AutoViz
-AutoViz.set_color_theme(OFFICETHEME)
+using AutomotiveVisualization
+AutomotiveVisualization.set_color_theme(OFFICETHEME)
 include("scripts/make_gif.jl")
 
 rng = MersenneTwister(1)
@@ -83,7 +83,7 @@ include("visualizer.jl");
 
 i = 36
 s = state_hist(hist)[i]
-c = AutoViz.render(s.scene, mdp.env.roadway,  cam = StaticCamera(VecE2(-25.0, -10.0), 10.0),
+c = AutomotiveVisualization.render(s.scene, mdp.env.roadway,  cam = StaticCamera(VecE2(-25.0, -10.0), 10.0),
                 [MergingNeighborsOverlay(target_id=EGO_ID, env=mdp.env)],
                 car_colors=get_car_type_colors(s0.scene, mdp.driver_models))
 
@@ -149,7 +149,7 @@ frames = Frames(MIME("image/png"), fps=4);
 for step in 1:n_steps(hist)
     s = state_hist(hist)[step+1]
     a = collect(action_hist(hist))[step]
-    f = AutoViz.render(s.scene, mdp.env.roadway, 
+    f = AutomotiveVisualization.render(s.scene, mdp.env.roadway, 
           SceneOverlay[
                        IDOverlay(),
                        MergingNeighborsOverlay(target_id=EGO_ID, env=mdp.env),

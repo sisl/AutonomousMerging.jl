@@ -19,13 +19,13 @@ ui = @manipulate for step in 1:n_steps(hist)+1
         reset_hidden_state!(model)
         # @show model.a
     end
-    if b!= nothing
+    if b!== nothing
         super_render(mdp, s, b)
     else
         super_render(mdp, s)
     end
     # model.other_acc = s.ego_info.acc
-    # AutoViz.render(s.scene, mdp.env.roadway, 
+    # AutomotiveVisualization.render(s.scene, mdp.env.roadway, 
     #       SceneOverlay[
     #                    IDOverlay(color=colorant"white",font_size=20),
     #                    MergingNeighborsOverlay(target_id=EGO_ID, env=mdp.env),

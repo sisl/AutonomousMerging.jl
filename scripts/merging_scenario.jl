@@ -12,7 +12,7 @@ using Parameters
 using GridInterpolations
 using StaticArrays
 using AutoUrban
-using AutoViz 
+using AutomotiveVisualization 
 using Printf
 using Reel
 using DiscreteValueIteration
@@ -91,7 +91,7 @@ ui = @manipulate for step in 1:n_steps(hist)
     s = state_hist(hist)[step]
     a = collect(action_hist(hist))[step]
     v = MergingViz(mdp=mdp, s=s, a=a, action_values = actionvalues(policy, s))
-    AutoViz.render([v], cam=StaticCamera(VecE2(0.0, 0.0), 15.0))
+    AutomotiveVisualization.render([v], cam=StaticCamera(VecE2(0.0, 0.0), 15.0))
 end
 body!(w, ui)
 
@@ -140,21 +140,21 @@ body!(w, ui)
 ci = findfirst(isequal(0.0), res[:reward])
 rng = MersenneTwister(ci)
 frames = Frames(MIME("image/png"), fps=4)
-AutoViz.render([mdp.env.roadway, s0], cam = StaticCamera(VecE2(0.0,0.0), 15.0))
+AutomotiveVisualization.render([mdp.env.roadway, s0], cam = StaticCamera(VecE2(0.0,0.0), 15.0))
 for step in stepthrough(mdp, policy, s0, "s,a,r,sp", rng=rng, max_steps=100)
     s, a, r, sp = step
     @show s
     @show a
     @show r
     info = @printf("EGO VEHICLE sp = %3.0f lane = %s reward = %1.1f", s[1], mdp.ego_lane.tag, r)
-    push!(frames, AutoViz.render([mdp.env.roadway, (sp, a)], cam=StaticCamera(VecE2(0.0,0.0), 15.0)))
+    push!(frames, AutomotiveVisualization.render([mdp.env.roadway, (sp, a)], cam=StaticCamera(VecE2(0.0,0.0), 15.0)))
     print(" . \n" )
 end
 write("out.gif", frames)
 
 hist = simulate(hr, mdp, policy, s0)
 
-AutoViz.render([mdp.env.roadway, state_hist(hist)[end]], cam = SceneFollowCamera())
+AutomotiveVisualization.render([mdp.env.roadway, state_hist(hist)[end]], cam = SceneFollowCamera())
 
 undiscounted_reward(hist)
 
@@ -168,13 +168,13 @@ hist.reward_hist[end]
 isterminal(mdp, state_hist(hist)[end])
 
 frames = Frames(MIME("image/png"), fps=8)
-# AutoViz.render([mdp.env.roadway, s0], cam = SceneFollowCamera())
+# AutomotiveVisualization.render([mdp.env.roadway, s0], cam = SceneFollowCamera())
 for step in stepthrough(mdp, policy, s0, "s,a,r,sp", rng=rng, max_steps=100)
     s, a, r, sp = step
     @show s
     @show a
     info = @printf("EGO VEHICLE sp = %3.0f lane = %s reward = %1.1f", s[1], mdp.ego_lane.tag, r)
-    push!(frames, AutoViz.render([mdp.env.roadway, sp], cam=SceneFollowCamera()))
+    push!(frames, AutomotiveVisualization.render([mdp.env.roadway, sp], cam=SceneFollowCamera()))
     print(" . \n" )
 end
 write("out.gif", frames)
@@ -209,12 +209,12 @@ rm("reward.jld2")
 #     @show s
 #     @show a
 #     info = @printf("EGO VEHICLE s = %3.0f lane = %s", s[1], mdp.ego_lane.tag)
-#     push!(frames, AutoViz.render([mdp.env.roadway, s], cam=SceneFollowCamera()))
+#     push!(frames, AutomotiveVisualization.render([mdp.env.roadway, s], cam=SceneFollowCamera()))
 #     print(" . \n" )
 # end
 # write("out.gif", frames)
 
-# AutoViz.render([mdp.env.roadway, state_hist(hist)[2]], cam=SceneFollowCamera())
+# AutomotiveVisualization.render([mdp.env.roadway, state_hist(hist)[2]], cam=SceneFollowCamera())
 # Reel.set_output_type("gif")
 # 
 # s = initialstate(mdp, rng)
@@ -322,7 +322,7 @@ rm("reward.jld2")
 # hist = simulate(hr, mdp, policy, s0)
 
 # frames = Frames(MIME("image/png"), fps=8)
-# AutoViz.render([mdp.env.roadway, s0], cam = SceneFollowCamera())
+# AutomotiveVisualization.render([mdp.env.roadway, s0], cam = SceneFollowCamera())
 
 
 # for step in stepthrough(mdp, policy, s0, "s,a,r,sp", rng=rng, max_steps=100)
@@ -330,12 +330,12 @@ rm("reward.jld2")
 #     @show s
 #     @show a
 #     info = @printf("EGO VEHICLE sp = %3.0f lane = %s reward = %1.1f", s[1], mdp.ego_lane.tag, r)
-#     push!(frames, AutoViz.render([mdp.env.roadway, sp], cam=SceneFollowCamera()))
+#     push!(frames, AutomotiveVisualization.render([mdp.env.roadway, sp], cam=SceneFollowCamera()))
 #     print(" . \n" )
 # end
 # write("out.gif", frames)
 
-# AutoViz.render([mdp.env.roadway, state_hist(hist)[end-1]], cam=SceneFollowCamera())
+# AutomotiveVisualization.render([mdp.env.roadway, state_hist(hist)[end-1]], cam=SceneFollowCamera())
 
 
 # @show actionvalues(policy, state_hist(hist)[end-1])
@@ -355,14 +355,14 @@ rm("reward.jld2")
 # state_space = collect(states(mdp));
 
 # s = rand(rng, state_space)
-# AutoViz.render([mdp.env.roadway, s], cam = SceneFollowCamera())
+# AutomotiveVisualization.render([mdp.env.roadway, s], cam = SceneFollowCamera())
 
 # collisioncheck(mdp, s)
 
 # ## Rendering 
 
 # ego_posF = Frenet(roadway[LaneTag(MERGE_LANE_ID, 1)], 100.0)
-# ego = Vehicle(VehicleState(ego_posF, roadway, 10.0), CARDEF, EGO_ID)
+# ego = Entity(VehicleState(ego_posF, roadway, 10.0), CARDEF, EGO_ID)
 # scene = Scene()
 # push!(scene, ego)
 
@@ -370,12 +370,12 @@ rm("reward.jld2")
 # frames = Frames(MIME("image/png"), fps=4)
 # for s = 1:10:1000.0
 #     ego_posF = Frenet(roadway[LaneTag(MERGE_LANE_ID, 1)], s)
-#     ego = Vehicle(VehicleState(ego_posF, roadway, 0.), CARDEF, EGO_ID)
+#     ego = Entity(VehicleState(ego_posF, roadway, 0.), CARDEF, EGO_ID)
 #     scene = Scene()
 #     push!(scene, ego)
 #     info = @sprintf("EGO VEHICLE s = %3.0f lane = %s", ego.state.posF.s, ego.state.posF.roadind.tag)
 #     to = TextOverlay(text=[info], pos=ego.state.posG, font_size = 20, incameraframe=true)
-#     c = AutoViz.render(scene, roadway, [to])
+#     c = AutomotiveVisualization.render(scene, roadway, [to])
 #     push!(frames, c)
 # end
 # write("out.mp4", frames)

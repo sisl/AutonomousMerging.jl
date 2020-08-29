@@ -105,10 +105,10 @@ function vec_to_scene(mdp::GenerativeMergingMDP, features::Vector{Float64})
     
     v_ego = features[2]
     acc_ego = features[3]
-    ego = Vehicle(vehicle_state(s_ego, lane_ego, v_ego, mdp.env.roadway), VehicleDef(), EGO_ID)
+    ego = Entity(vehicle_state(s_ego, lane_ego, v_ego, mdp.env.roadway), VehicleDef(), EGO_ID)
     push!(scene, ego)
     for i=2:mdp.n_cars_main+1
-        veh = Vehicle(vehicle_state(features[2*i], main_lane(mdp.env), features[2*i+1], mdp.env.roadway),
+        veh = Entity(vehicle_state(features[2*i], main_lane(mdp.env), features[2*i+1], mdp.env.roadway),
                       VehicleDef(), i)
         push!(scene, veh)
     end
@@ -118,13 +118,13 @@ end
 ## Rendering
 
 """
-    AutoViz.render(mdp::GenerativeMergingMDP, features::Vector{Float64}, filename=nothing)
+    AutomotiveVisualization.render(mdp::GenerativeMergingMDP, features::Vector{Float64}, filename=nothing)
 render a scene as a CairoSurface. If filename is passed in, write the surface to a png file.
 """
-function AutoViz.render(mdp::GenerativeMergingMDP, features::Vector{Float64}, filename=nothing)
+function AutomotiveVisualization.render(mdp::GenerativeMergingMDP, features::Vector{Float64}, filename=nothing)
     s = vec_to_scene(mdp, features)
     c = super_render(mdp, s)
-    if filename != nothing 
+    if filename !== nothing 
         write_to_png(c, filename)
     end
     return c

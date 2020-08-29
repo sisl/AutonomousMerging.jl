@@ -2,6 +2,8 @@ module AutonomousMerging
 
 using Random
 using Printf
+using LinearAlgebra
+using Distributions
 using Parameters
 using StatsBase
 using POMDPs
@@ -9,8 +11,8 @@ using POMDPModelTools
 using BeliefUpdaters
 using StaticArrays
 using GridInterpolations
-using AutomotiveDrivingModels
-using AutoViz
+using AutomotiveSimulator
+using AutomotiveVisualization
 
 const EGO_ID = 1
 

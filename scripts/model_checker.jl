@@ -12,7 +12,7 @@ using Parameters
 using GridInterpolations
 using StaticArrays
 using AutoUrban
-using AutoViz 
+using AutomotiveVisualization 
 using Printf
 using Reel
 using DiscreteValueIteration

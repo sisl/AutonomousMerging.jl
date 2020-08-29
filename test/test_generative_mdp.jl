@@ -4,7 +4,7 @@ using Printf
 using StatsBase
 using StaticArrays
 using POMDPs
-using AutoViz
+using AutomotiveVisualization
 using AutomotiveDrivingModels
 using AutomotivePOMDPs
 using POMDPSimulators
@@ -35,7 +35,7 @@ policy = FunctionPolicy(s->4)
 s0 = initialstate(mdp, rng)
 
 scene = s0.scene
-AutoViz.render(scene, mdp.env.roadway, [IDOverlay()], car_colors=get_car_type_colors(scene, mdp.driver_models), cam=StaticCamera(VecE2(-25.0, -10.0), 6.0))
+AutomotiveVisualization.render(scene, mdp.env.roadway, [IDOverlay()], car_colors=get_car_type_colors(scene, mdp.driver_models), cam=StaticCamera(VecE2(-25.0, -10.0), 6.0))
 
 hr = HistoryRecorder(rng = rng, max_steps=100)
 hist = simulate(hr, mdp, policy, s0)
@@ -44,7 +44,7 @@ include("visualizer.jl");
 
 s = state_hist(hist)[end-5]
 s = s0
-AutoViz.render(s.scene, mdp.env.roadway, 
+AutomotiveVisualization.render(s.scene, mdp.env.roadway, 
           SceneOverlay[IDOverlay(),
                        MergingNeighborsOverlay(target_id=EGO_ID, env=mdp.env),
                     #    DistToMergeOverlay(target_id=EGO_ID, env=mdp.env),
@@ -61,7 +61,7 @@ AutoViz.render(s.scene, mdp.env.roadway,
 svec = convert_s(Vector{Float64}, s, mdp)
 srec = convert_s(AugScene, svec, mdp)
 
-AutoViz.render(srec.scene, mdp.env.roadway, 
+AutomotiveVisualization.render(srec.scene, mdp.env.roadway, 
           SceneOverlay[IDOverlay(),
                        MergingNeighborsOverlay(target_id=EGO_ID, env=mdp.env),
                        DistToMergeOverlay(target_id=EGO_ID, env=mdp.env),
@@ -84,18 +84,18 @@ hr = HistoryRecorder(rng = rng, max_steps=100)
 scene = state_hist(hist)[2].scene
 get_neighbor_rear_along_left_lane(scene, 1, mdp.env.roadway, VehicleTargetPointRear(), VehicleTargetPointFront(), VehicleTargetPointRear())
 
-AutoViz.render(s0.scene, mdp.env.roadway, cam=FitToContentCamera(0.0))
+AutomotiveVisualization.render(s0.scene, mdp.env.roadway, cam=FitToContentCamera(0.0))
 s = s0
 
 sp = generate_s(mdp, s, 4, rng)
-AutoViz.render(s.scene, mdp.env.roadway, cam=FitToContentCamera(0.0))
+AutomotiveVisualization.render(s.scene, mdp.env.roadway, cam=FitToContentCamera(0.0))
 s = sp
 w = Window()
 
 ui = @manipulate for step in 1:n_steps(hist)
     s = state_hist(hist)[step+1]
     a = collect(action_hist(hist))[step]
-    AutoViz.render(s.scene, mdp.env.roadway, 
+    AutomotiveVisualization.render(s.scene, mdp.env.roadway, 
           SceneOverlay[IDOverlay()],
           cam=FitToContentCamera(0.0), 
           car_colors = Dict{Int64, Colorant}(1 => COLOR_CAR_EGO))
@@ -153,7 +153,7 @@ frames = Frames(MIME("image/png"), fps=4)
 for step in 1:n_steps(hist)
     s = state_hist(hist)[step+1]
     a = collect(action_hist(hist))[step]
-    f = AutoViz.render(s, mdp.env.roadway, 
+    f = AutomotiveVisualization.render(s, mdp.env.roadway, 
           SceneOverlay[IDOverlay()],
           cam=FitToContentCamera(0.0), 
           car_colors = Dict{Int64, Colorant}(1 => COLOR_CAR_EGO))
@@ -182,7 +182,7 @@ undiscounted_reward(hist)
 ui = @manipulate for step in 1:n_steps(hist)
     s = state_hist(hist)[step+1]
     a = collect(action_hist(hist))[step]
-    AutoViz.render(s, mdp.env.roadway, 
+    AutomotiveVisualization.render(s, mdp.env.roadway, 
           SceneOverlay[IDOverlay()],
           cam=FitToContentCamera(0.0), 
           car_colors = Dict{Int64, Colorant}(1 => COLOR_CAR_EGO))

@@ -1,6 +1,6 @@
 # Rendering 
 
-For more information on how to use overlays and other rendering features see [AutoViz.jl](https://github.com/sisl/AutoViz.jl).
+For more information on how to use overlays and other rendering features see [AutomotiveVisualization.jl](https://github.com/sisl/AutomotiveVisualization.jl).
 
 ```@docs
     MergingNeighborsOverlay

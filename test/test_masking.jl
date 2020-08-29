@@ -1,15 +1,15 @@
 using Test
 function test_state(v, acc, s=101.0)
-    ego = Vehicle(vehicle_state(s, main_lane(mdp.env), v, mdp.env.roadway), VehicleDef(), EGO_ID)
-    veh1 = Vehicle(vehicle_state(70.0, main_lane(mdp.env), 20.0, mdp.env.roadway), VehicleDef(), EGO_ID + 1)
-    veh2 = Vehicle(vehicle_state(150.0, main_lane(mdp.env), 20.0, mdp.env.roadway), VehicleDef(), EGO_ID + 2)
+    ego = Entity(vehicle_state(s, main_lane(mdp.env), v, mdp.env.roadway), VehicleDef(), EGO_ID)
+    veh1 = Entity(vehicle_state(70.0, main_lane(mdp.env), 20.0, mdp.env.roadway), VehicleDef(), EGO_ID + 1)
+    veh2 = Entity(vehicle_state(150.0, main_lane(mdp.env), 20.0, mdp.env.roadway), VehicleDef(), EGO_ID + 2)
     scene = Scene()
     push!.(Ref(scene), [ego, veh1, veh2])
 
     return AugScene(scene, (acc=acc,))
 end
 
-AutoViz.render(s.scene, mdp.env.roadway, [IDOverlay()], cam=CarFollowCamera(1, 10.0))
+AutomotiveVisualization.render(s.scene, mdp.env.roadway, [IDOverlay()], cam=CarFollowCamera(1, 10.0))
 
 s = test_state(20.0, 0.0)
 @test speed_limit_actions(mdp, s) == actions(mdp)

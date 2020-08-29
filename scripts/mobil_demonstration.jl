@@ -1,7 +1,7 @@
 using Revise
 using AutomotiveDrivingModels
 using AutomotivePOMDPs
-using AutoViz
+using AutomotiveVisualization
 using AutonomousMerging
 using Distributions
 using Random
@@ -50,14 +50,14 @@ function AutomotiveDrivingModels.propagate(veh::Entity{VehicleState,D,I}, action
     return veh
 end
 
-function wrap_around(roadway::Roadway, veh::Vehicle)
+function wrap_around(roadway::Roadway, veh::Entity)
     lane = get_lane(roadway, veh)
     s_end = get_end(lane)
     s = veh.state.posF.s
     if s >= s_end 
         posF = Frenet(lane, 0.0)
         vehstate = VehicleState(posF, roadway, veh.state.v)
-        return Vehicle(vehstate,veh.def, veh.id)
+        return Entity(vehstate,veh.def, veh.id)
     end
     return veh
 end
@@ -98,7 +98,7 @@ function initial_scene(n_vehicles, roadway, model;
         s = rand(rng, 0.0:lane.curve[end].s)
         posF = Frenet(lane, s)
         vehstate = VehicleState(posF, roadway, v)
-        veh = Vehicle(vehstate, VehicleDef(), i)
+        veh = Entity(vehstate, VehicleDef(), i)
         models[i] = deepcopy(model)
         set_desired_speed!(models[i], v)
         push!(scene, veh)

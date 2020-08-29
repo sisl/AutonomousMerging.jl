@@ -33,7 +33,6 @@ const AbsentPos = -1.0
 
 POMDPs.discount(mdp::MergingMDP) = mdp.discount_factor
 POMDPs.actions(mdp::MergingMDP) = 1:7
-POMDPs.n_actions(mdp::MergingMDP) = 7
 POMDPs.actionindex(mdp::MergingMDP, a::Int64) = a
 
 
@@ -45,7 +44,6 @@ function POMDPs.states(mdp::MergingMDP)
                              mdp.velocity_grid)
     vecs = imap(x->Float64[x...], prod)
 end
-POMDPs.n_states(mdp::MergingMDP) = reduce(*, length.([mdp.ego_grid, mdp.velocity_grid, mdp.acceleration_grid, vcat(mdp.human_grid, AbsentPos), mdp.velocity_grid]))
 
 function POMDPs.stateindex(mdp::MergingMDP, s::MergingState)
     se, ve, ae, so, vo = s
@@ -114,7 +112,7 @@ function remove_doublons(s::Vector{S}, w::Vector{Float64}) where S
     ws = Float64[]
     for (i, s) in enumerate(s)
         si = findfirst(isequal(s), ns)
-        if si != nothing 
+        if si !== nothing 
             ws[si] += w[i]
         else 
             push!(ns, s)
@@ -178,12 +176,12 @@ end
     action_values::Union{Nothing, Vector{Float64}} = nothing
 end
 
-function AutoViz.render!(rm::RenderModel, v::MergingViz)
-    render!(rm , mdp.env.roadway)
+function AutomotiveVisualization.add_renderable!(rm::RenderModel, v::MergingViz)
+    add_renderable!(rm, v.mdp.env.roadway)
     se, ve, acc, so, vo = v.s
     text_ego = @sprintf("v: %2.2f", ve)
     act = v.a
-    if act != nothing
+    if act !== nothing
         as = "a = "
         if act == 1
             as *= "full brake"
@@ -195,14 +193,14 @@ function AutoViz.render!(rm::RenderModel, v::MergingViz)
         text_ego *= ", " * as
     end
     av = v.action_values 
-    if av != nothing 
+    if av !== nothing 
         text_ego *= "Probas " * reduce(*, @sprintf("%1.2f, ", pa) for pa in av)
     end
-    ego_posG = get_posG(Frenet(mdp.ego_lane, se), mdp.env.roadway)
+    ego_posG = get_posG(Frenet(v.mdp.ego_lane, se), v.mdp.env.roadway)
     ego_acar = ArrowCar(ego_posG.x, ego_posG.y, ego_posG.θ,
                         color=COLOR_CAR_EGO, text=text_ego,
-                        length=mdp.cardef.length, width=mdp.cardef.width)
-    other_posG = get_posG(Frenet(mdp.other_lane, so), mdp.env.roadway)
+                        length=v.mdp.cardef.length, width=v.mdp.cardef.width)
+    other_posG = get_posG(Frenet(v.mdp.other_lane, so), v.mdp.env.roadway)
     if so == AbsentPos
         other_color = RGB(0.5,0.5,0.5)
     else
@@ -210,14 +208,14 @@ function AutoViz.render!(rm::RenderModel, v::MergingViz)
     end
     other_acar = ArrowCar(other_posG.x, other_posG.y, other_posG.θ,
                           color=other_color, text="v: $vo",
-                          length=mdp.cardef.length, width=mdp.cardef.width)
-    render!(rm, ego_acar)
-    render!(rm, other_acar)
+                          length=v.mdp.cardef.length, width=v.mdp.cardef.width)
+    add_renderable!(rm, ego_acar)
+    add_renderable!(rm, other_acar)
 end
 
-function AutoViz.getcenter(s::MergingState)
-    se, v, acc, so, vo = s  
-    ego_posG = get_posG(Frenet(mdp.ego_lane, se), mdp.env.roadway)
-    other_posG = get_posG(Frenet(mdp.other_lane, so), mdp.env.roadway)
-    return 0.5*SVector(ego_posG.x + other_posG.x, ego_posG.y + other_posG.y)
-end
+# function AutomotiveVisualization.getcenter(s::MergingState)
+#     se, v, acc, so, vo = s  
+#     ego_posG = get_posG(Frenet(mdp.ego_lane, se), mdp.env.roadway)
+#     other_posG = get_posG(Frenet(mdp.other_lane, so), mdp.env.roadway)
+#     return 0.5*SVector(ego_posG.x + other_posG.x, ego_posG.y + other_posG.y)
+# end

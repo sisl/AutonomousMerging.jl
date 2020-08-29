@@ -28,19 +28,19 @@ end
 function POMDPs.convert_s(t::Type{V}, b::MergingBelief, mdp::GenerativeMergingMDP) where V<:AbstractArray
     ovec = convert_s(t, b.o, mdp)
     fore, merge, fore_main, rear_main = get_neighbors(mdp.env, b.o.scene, EGO_ID)
-    if fore.ind != nothing 
+    if fore.ind !== nothing 
         fore_id = b.o.scene[fore.ind].id
         ovec[6] = b.driver_types[fore_id] > 0.5
     end
-    if merge.ind != nothing 
+    if merge.ind !== nothing 
         merge_id = b.o.scene[merge.ind].id
         ovec[9] = b.driver_types[merge_id] > 0.5
     end
-    if fore_main.ind != nothing 
+    if fore_main.ind !== nothing 
         fore_main_id = b.o.scene[fore_main.ind].id
         ovec[12] = b.driver_types[fore_main_id] > 0.5
     end
-    if rear_main.ind != nothing 
+    if rear_main.ind !== nothing 
         rear_main_id = b.o.scene[rear_main.ind].id
         ovec[15] = b.driver_types[rear_main_id] > 0.5
     end
@@ -51,22 +51,22 @@ function belief_weight(t::Type{V}, b::MergingBelief, mdp::GenerativeMergingMDP, 
     ovec = convert_s(t, b.o, mdp)
     fore, merge, fore_main, rear_main = get_neighbors(mdp.env, b.o.scene, EGO_ID)
     weight = 1.0
-    if fore.ind != nothing 
+    if fore.ind !== nothing 
         fore_id = b.o.scene[fore.ind].id
         ovec[6] = state[1] #b.driver_types[fore_id] > 0.5
         weight *= b.driver_types[fore_id]*state[1] + (1 - b.driver_types[fore_id])*(1 - state[1])
     end
-    if merge.ind != nothing 
+    if merge.ind !== nothing 
         merge_id = b.o.scene[merge.ind].id
         ovec[9] = state[2] #b.driver_types[merge_id] > 0.5
         weight *= b.driver_types[merge_id]*state[2] + (1 - b.driver_types[merge_id])*(1 - state[2])
     end
-    if fore_main.ind != nothing 
+    if fore_main.ind !== nothing 
         fore_main_id = b.o.scene[fore_main.ind].id
         ovec[12] = state[3] #b.driver_types[fore_main_id] > 0.5
         weight *= b.driver_types[fore_main_id]*state[3] + (1 - b.driver_types[fore_main_id])*(1 - state[3])
     end
-    if rear_main.ind != nothing 
+    if rear_main.ind !== nothing 
         rear_main_id = b.o.scene[rear_main.ind].id
         ovec[15] = state[4] #b.driver_types[rear_main_id] > 0.5
         weight *= b.driver_types[rear_main_id]*state[4] + (1 - b.driver_types[rear_main_id])*(1 - state[4])
@@ -97,42 +97,11 @@ struct MergingUpdater <: Updater
 end
 
 function POMDPs.update(up::MergingUpdater, b_old::MergingBelief, a::Int64, o::AugScene)
-    # b_neigh = update_neighbors(up.mdp, b_old, o)
     driver_types = deepcopy(b_old.driver_types)
     for i=2:up.mdp.max_cars+1
         update_proba!(up.mdp, b_old, driver_types, a, o, i)
     end
     return MergingBelief(o, driver_types)
-end
-
-function update_neighbors(mdp::GenerativeMergingMDP, b::MergingBelief, o::AugScene)
-    fore, merge, fore_main, rear_main = get_neighbors(mdp.env, o.scene, EGO_ID)
-    bfore = b.fore 
-    bmerge = b.merge 
-    bforemain = b.fore_main
-    brearmain = b.rear_main
-    current_neighbors = [bfore.id, bmerge.id, bforemain.id, brearmain.id]
-    if fore.ind == nothing
-        bfore = (id=nothing, prob=0.5)
-    elseif o.scene[fore.ind].id != b.fore.id
-        bfore = (id=o.scene[fore.ind].id, prob=0.5)
-    end
-    if merge.ind == nothing 
-        bmerge = (id=nothing, prob=0.5)
-    elseif o.scene[merge.ind].id != b.merge.id
-        bmerge = (id=o.scene[merge.ind].id, prob=0.5)
-    end
-    if fore_main.ind == nothing 
-        bforemain = (id=nothing, prob=0.5)
-    elseif o.scene[fore_main.ind].id != b.fore_main.id 
-        bforemain = (id=o.scene[fore_main.ind].id, prob=0.5)
-    end
-    if rear_main.ind == nothing 
-        bforerear = (id=nothing, prob=0.5)
-    elseif o.scene[rear_main.ind].id != b.rear_main.id 
-        brearmain = (id=o.scene[rear_main.ind].id, prob=0.5)
-    end
-    return MergingBelief(b.o, bfore, bmerge, bforemain, brearmain)
 end
 
 function update_proba!(mdp::GenerativeMergingMDP, b::MergingBelief, driver_types::Dict, a::Int64, o::AugScene, id::Int64)
@@ -147,7 +116,7 @@ function update_proba!(mdp::GenerativeMergingMDP, b::MergingBelief, driver_types
     probs = zeros(2)
     for c in [0, 1]
         mdp.driver_models[id].c = c
-        v_des = 5.0
+        v_des = 5.0 #XXX This should not be hardcoded!!!
         set_desired_speed!(mdp.driver_models[id], v_des)
         d = transition(mdp, b.o, a)
         probs[Int(c + 1)] += pdf(d, sp_vec)*(c*old_prob + (1 - c)*(1 - old_prob))

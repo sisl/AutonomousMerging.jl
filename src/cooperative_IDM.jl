@@ -36,8 +36,8 @@ the car follows the IntelligentDriverModel.
     consider_merge::Bool = false
 end
 
-Base.rand(model::CooperativeIDM) = LaneFollowingAccel(model.a)
-function AutomotiveDrivingModels.reset_hidden_state!(model::CooperativeIDM)
+Base.rand(rng::AbstractRNG, model::CooperativeIDM) = LaneFollowingAccel(model.a)
+function AutomotiveSimulator.reset_hidden_state!(model::CooperativeIDM)
     reset_hidden_state!(model.idm)
     model.a = 0.0
     model.a_merge = 0.0
@@ -47,16 +47,16 @@ function AutomotiveDrivingModels.reset_hidden_state!(model::CooperativeIDM)
     model.dist_at_merge = 0.0
 end
 
-function AutomotiveDrivingModels.set_desired_speed!(model::CooperativeIDM, vdes::Float64)
+function AutomotiveSimulator.set_desired_speed!(model::CooperativeIDM, vdes::Float64)
     set_desired_speed!(model.idm, vdes)
 end
 
-function AutomotiveDrivingModels.observe!(model::CooperativeIDM, scene::Scene, roadway::Roadway, egoid::Int64)
+function AutomotiveSimulator.observe!(model::CooperativeIDM, scene::Scene, roadway::Roadway, egoid::Int64)
     ego_ind = findfirst(egoid, scene)
     # @printf("OBSERVE COOPERATIVE IDM \n")
     ego = scene[ego_ind]
-    fore = get_neighbor_fore_along_lane(scene, ego_ind, roadway, VehicleTargetPointFront(), VehicleTargetPointRear(), VehicleTargetPointFront())
-    if fore.ind == nothing # uses the first vehicle on the lain as neighbor
+    fore = find_neighbor(scene, roadway, ego)
+    if fore.ind === nothing # uses the first vehicle on the lane as neighbor
 
         vehmin, vehind = findfirst_lane(scene, main_lane(model.env))
         headway = get_end(main_lane(model.env)) - ego.state.posF.s + vehmin.state.posF.s
@@ -69,7 +69,7 @@ function AutomotiveDrivingModels.observe!(model::CooperativeIDM, scene::Scene, r
     a_idm = model.idm.a
     model.a_idm = a_idm 
     veh = find_merge_vehicle(model.env, scene)
-    if veh == nothing || veh.state.posF.s < model.fov
+    if veh === nothing || veh.state.posF.s < model.fov
         # println("No merge vehicle")
         model.a = model.a_idm
     else

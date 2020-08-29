@@ -93,7 +93,7 @@ var documenterSearchIndex = {"docs": [
     "page": "Generative Merging MDP",
     "title": "AutonomousMerging.initial_merge_car_state",
     "category": "function",
-    "text": "initial_merge_car_state(mdp::GenerativeMergingMDP, rng::AbstractRNG, id::Int64)\n\nreturns a Vehicle, at the initial state of the merging car.\n\n\n\n\n\n"
+    "text": "initial_merge_car_state(mdp::GenerativeMergingMDP, rng::AbstractRNG, id::Int64)\n\nreturns a Entity, at the initial state of the merging car.\n\n\n\n\n\n"
 },
 
 {
@@ -101,7 +101,7 @@ var documenterSearchIndex = {"docs": [
     "page": "Generative Merging MDP",
     "title": "AutonomousMerging.reset_main_car_state",
     "category": "function",
-    "text": "reset_main_car_state(mdp::GenerativeMergingMDP, veh::Vehicle)\n\ninitialize a car at the beginning of the main lane\n\n\n\n\n\n"
+    "text": "reset_main_car_state(mdp::GenerativeMergingMDP, veh::Entity)\n\ninitialize a car at the beginning of the main lane\n\n\n\n\n\n"
 },
 
 {
@@ -109,7 +109,7 @@ var documenterSearchIndex = {"docs": [
     "page": "Generative Merging MDP",
     "title": "AutonomousMerging.reachgoal",
     "category": "function",
-    "text": "reachgoal(mdp::GenerativeMergingMDP, ego::Vehicle)\n\nreturn true if ego reached the goal position\n\n\n\n\n\n"
+    "text": "reachgoal(mdp::GenerativeMergingMDP, ego::Entity)\n\nreturn true if ego reached the goal position\n\n\n\n\n\n"
 },
 
 {
@@ -237,7 +237,7 @@ var documenterSearchIndex = {"docs": [
     "page": "Merging Environment",
     "title": "AutonomousMerging.dist_to_merge",
     "category": "function",
-    "text": "dist_to_merge(env::MergingEnvironment, veh::Vehicle)\n\nreturns the distance to the merge point.\n\n\n\n\n\n"
+    "text": "dist_to_merge(env::MergingEnvironment, veh::Entity)\n\nreturns the distance to the merge point.\n\n\n\n\n\n"
 },
 
 {
@@ -245,7 +245,7 @@ var documenterSearchIndex = {"docs": [
     "page": "Merging Environment",
     "title": "AutonomousMerging.time_to_merge",
     "category": "function",
-    "text": "time_to_merge(env::MergingEnvironment, veh::Vehicle, a::Float64 = 0.0)\n\nreturn the time to reach the merge point using constant acceleration prediction.  If the acceleration, a is not specified, it performs a constant velocity prediction.\n\n\n\n\n\n"
+    "text": "time_to_merge(env::MergingEnvironment, veh::Entity, a::Float64 = 0.0)\n\nreturn the time to reach the merge point using constant acceleration prediction.  If the acceleration, a is not specified, it performs a constant velocity prediction.\n\n\n\n\n\n"
 },
 
 {
@@ -261,7 +261,7 @@ var documenterSearchIndex = {"docs": [
     "page": "Merging Environment",
     "title": "AutonomousMerging.constant_acceleration_prediction",
     "category": "function",
-    "text": "constant_acceleration_prediction(env::MergingEnvironment, veh::Vehicle, acc::Float64, time::Float64, v_des::Float64)\n\nreturns the state of vehicle veh after time time using a constant acceleration prediction. \n\ninputs\n\nenv::MergingEnvironment the environment \nveh::Vehicle the initial state of the vehicle\nacc::Float64 the current acceleration of the vehicle \ntime::Float64 the prediction horizon \nv_des::Float64 the desired speed of the vehicle (assumes that the vehicle will not exceed that speed)\n\n\n\n\n\n"
+    "text": "constant_acceleration_prediction(env::MergingEnvironment, veh::Entity, acc::Float64, time::Float64, v_des::Float64)\n\nreturns the state of vehicle veh after time time using a constant acceleration prediction. \n\ninputs\n\nenv::MergingEnvironment the environment \nveh::Entity the initial state of the vehicle\nacc::Float64 the current acceleration of the vehicle \ntime::Float64 the prediction horizon \nv_des::Float64 the desired speed of the vehicle (assumes that the vehicle will not exceed that speed)\n\n\n\n\n\n"
 },
 
 {
@@ -269,7 +269,7 @@ var documenterSearchIndex = {"docs": [
     "page": "Merging Environment",
     "title": "AutonomousMerging.distance_projection",
     "category": "function",
-    "text": "distance_projection(env::MergingEnvironment, veh::Vehicle)\n\nPerforms a projection of veh onto the main lane. It returns the longitudinal position of the projection of veh on the main lane.  The projection is computing by conserving the distance to the merge point.\n\n\n\n\n\n"
+    "text": "distance_projection(env::MergingEnvironment, veh::Entity)\n\nPerforms a projection of veh onto the main lane. It returns the longitudinal position of the projection of veh on the main lane.  The projection is computing by conserving the distance to the merge point.\n\n\n\n\n\n"
 },
 
 {
@@ -277,7 +277,7 @@ var documenterSearchIndex = {"docs": [
     "page": "Merging Environment",
     "title": "AutonomousMerging.collision_time",
     "category": "function",
-    "text": "collision_time(env::MergingEnvironment, veh::Vehicle, mergeveh::Vehicle, acc_merge::Float64, acc_min::Float64)\n\ncompute the collision time between two vehicles assuming constant acceleration.\n\n\n\n\n\n"
+    "text": "collision_time(env::MergingEnvironment, veh::Entity, mergeveh::Entity, acc_merge::Float64, acc_min::Float64)\n\ncompute the collision time between two vehicles assuming constant acceleration.\n\n\n\n\n\n"
 },
 
 {
@@ -333,7 +333,7 @@ var documenterSearchIndex = {"docs": [
     "page": "Rendering",
     "title": "Rendering",
     "category": "section",
-    "text": "For more information on how to use overlays and other rendering features see AutoViz.jl.    MergingNeighborsOverlay\r\n    DistToMergeOverlay\r\n    MaskingOverlay\r\n    CooperativeIDMOverlay\r\n    BeliefOverlay\r\n    get_car_type_colors\r\n    super_render"
+    "text": "For more information on how to use overlays and other rendering features see AutomotiveVisualization.jl.    MergingNeighborsOverlay\r\n    DistToMergeOverlay\r\n    MaskingOverlay\r\n    CooperativeIDMOverlay\r\n    BeliefOverlay\r\n    get_car_type_colors\r\n    super_render"
 },
 
 ]}
